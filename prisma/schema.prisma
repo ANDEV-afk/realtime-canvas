@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id   String    @id @default(uuid())
+  name String
+  email String  @unique
+  image String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  workspaces Workspace[]  @relation("WorkspaceOwner")
+  workspaceMemberships WorkspaceMember[]
+  createdBoards Board[] @relation("BoardCreator")
+  editedBoards Board[] @relation("BoardEditor")
+  files File[]
+  comments Comment[]
+}
+
+model Workspace {
+  id String   @id@default(uuid())
+  name String 
+  slug  String  @unique
+  icon  String?
+
+  ownerId String
+  owner   User @relation("WorkspaceOwner",fields: [ownerId],references: [id],onDelete: Cascade)  
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  members       WorkspaceMember[]
+  boards Board[]
+  invitations Invitation[]
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id String  @id @default(uuid())
+  workspaceId String
+  userId String
+  role WorkspaceRole
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime @default(now())
+  @@unique([workspaceId, userId]) // same user cannot come in 1 workspace more than 1 time.
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model Board {
+  id String @id  @default(uuid())
+  workspaceId String
+  title String
+  description String?
+  thumbnail String?
+  snapshot Json
+  workspace Workspace @relation(fields: [workspaceId],references: [id],onDelete: Cascade)
+  updatedAt DateTime   @updatedAt
+  createdById String
+  lastEditedById String
+
+  createdBy User @relation("BoardCreator",fields: [createdById],references: [id],onDelete: NoAction)  
+  lastEditedBy User @relation("BoardEditor",fields: [lastEditedById],references: [id],onDelete: NoAction)
+  boardSnapshots BoardSnapshot[]
+  comments Comment[]
+
+  @@index([workspaceId])
+  @@index([createdById])
+  @@index([lastEditedById])
+}
+
+model BoardSnapshot {
+  id  String  @id @default(uuid())
+  boardId String
+  board Board  @relation(fields: [boardId],references: [id],onDelete: Cascade)
+
+  snapshot Json?  // create time edge case "required"
+
+  version Int
+  updatedAt DateTime   @updatedAt
+  @@unique([boardId,version])
+  @@index([boardId])
+}
+
+model Comment {
+  id String  @id @default(uuid())
+
+boardId String
+board Board @relation(fields: [boardId],references: [id],onDelete: Cascade)
+
+userId String
+user User @relation(fields: [userId],references: [id],onDelete: Cascade)
+
+shapeId String
+
+content String
+
+resolved Boolean @default(false)
+
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+@@index([boardId])
+@@index([userId])
+}
+
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+
+model Invitation {
+  id String  @id @default(uuid())
+
+  workspaceId String
+  workspace Workspace @relation(fields: [workspaceId],references: [id],onDelete: Cascade)
+
+  email String
+
+  role WorkspaceRole
+
+  status InvitationStatus @default(PENDING)
+
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  @@unique([workspaceId, email])
+}
+
+model File {
+
+id String @id @default(uuid())
+
+url String
+
+key String
+
+mimeType String
+
+size Int
+
+uploadedById String
+
+uploadedBy User @relation(fields:[uploadedById],references:[id],onDelete: Cascade)
+
+createdAt DateTime @default(now())
+}
