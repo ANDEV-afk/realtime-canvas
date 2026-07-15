@@ -1,41 +1,44 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { createDefaultBoard } from "@/lib/createDefaultBoard";
-import { createInitialWorkspace } from "@/lib/createInitialWorkspace";
-import prisma from "@/lib/prisma";
-import { headers } from "next/headers";
-import { User } from "@/generated/prisma/client";
+"use client"
 
-export default async function WorkspacePage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "@/lib/auth-client";
 
-  if (!session) {
-    redirect("/login");
-  }
+export default function WorkspacePage() {
+  const router = useRouter();
+  const { data: session, isPending } = useSession();
 
-  const workspace = await prisma.workspace.findFirst({
-    where: {
-      ownerId: session.user.id,
-    },
-    include: {
-      boards: {
-        orderBy: {
-          updatedAt: "desc",
-        },
-        take: 1,
-      },
-    },
-  });
+  useEffect(() => {
+    if (isPending) return;
+    if (!session) { router.replace("/login"); return; }
 
-  if (!workspace) {
-    const result = await createInitialWorkspace(session.user as User);
+    fetch("/api/workspaces")
+      .then(r => r.json())
+      .then(async (workspaces) => {
+        if (!Array.isArray(workspaces)) { router.replace("/login"); return; }
 
-    redirect(`/workspace/${result.workspace.slug}/board/${result.board.id}`);
-  }
+        const ws = workspaces[0] as { id: string; slug: string };
 
-  const board =workspace.boards[0] ??(await createDefaultBoard(workspace.id, session.user.id));
+        if (workspaces.length === 0) {
+          const res = await fetch("/api/workspaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: `${session.user.name}'s Workspace` }),
+          });
+          if (!res.ok) return;
+          const { workspaceSlug, boardId } = await res.json();
+          router.replace(`/workspace/${workspaceSlug}/board/${boardId}`);
+          return;
+        }
 
-  redirect(`/workspace/${workspace.slug}/board/${board.id}`);
+        const boards = await fetch(`/api/workspaces/${ws.id}/boards`).then(r => r.json());
+        if (Array.isArray(boards) && boards.length > 0) {
+          router.replace(`/workspace/${ws.slug}/board/${boards[0].id}`);
+        } else {
+          router.replace(`/workspace/${ws.slug}`);
+        }
+      });
+  }, [session, isPending, router]);
+
+  return null;
 }
