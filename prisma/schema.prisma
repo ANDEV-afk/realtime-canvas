@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -8,47 +9,55 @@ datasource db {
 }
 
 model User {
-  id   String    @id @default(uuid())
-  name String
-  email String  @unique
-  image String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  workspaces Workspace[]  @relation("WorkspaceOwner")
+  id                   String            @id @default(uuid())
+  name                 String
+  email                String            @unique
+  image                String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  workspaces           Workspace[]       @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
-  createdBoards Board[] @relation("BoardCreator")
-  editedBoards Board[] @relation("BoardEditor")
-  files File[]
-  comments Comment[]
+  createdBoards        Board[]           @relation("BoardCreator")
+  editedBoards         Board[]           @relation("BoardEditor")
+  files                File[]
+  comments             Comment[]
+  emailVerified        Boolean           @default(false)
+  sessions             Session[]
+  accounts             Account[]
+
+  @@map("user")
 }
 
 model Workspace {
-  id String   @id@default(uuid())
-  name String 
-  slug  String  @unique
-  icon  String?
+  id   String  @id @default(uuid())
+  name String
+  slug String  @unique
+  icon String?
 
   ownerId String
-  owner   User @relation("WorkspaceOwner",fields: [ownerId],references: [id],onDelete: Cascade)  
+  owner   User   @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  members       WorkspaceMember[]
-  boards Board[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  members     WorkspaceMember[]
+  boards      Board[]
   invitations Invitation[]
+
   @@index([ownerId])
 }
 
 model WorkspaceMember {
-  id String  @id @default(uuid())
+  id          String        @id @default(uuid())
   workspaceId String
-  userId String
-  role WorkspaceRole
+  userId      String
+  role        WorkspaceRole
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  joinedAt  DateTime @default(now())
-  @@unique([workspaceId, userId]) // same user cannot come in 1 workspace more than 1 time.
+  joinedAt  DateTime  @default(now())
+
+  // same user cannot come in 1 workspace more than 1 time.
+  @@unique([workspaceId, userId])
   @@index([userId])
   @@index([workspaceId])
 }
@@ -61,21 +70,21 @@ enum WorkspaceRole {
 }
 
 model Board {
-  id String @id  @default(uuid())
-  workspaceId String
-  title String
-  description String?
-  thumbnail String?
-  snapshot Json
-  workspace Workspace @relation(fields: [workspaceId],references: [id],onDelete: Cascade)
-  updatedAt DateTime   @updatedAt
-  createdById String
+  id             String    @id @default(uuid())
+  workspaceId    String
+  title          String
+  description    String?
+  thumbnail      String?
+  snapshot       Json
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedAt      DateTime  @updatedAt
+  createdById    String
   lastEditedById String
 
-  createdBy User @relation("BoardCreator",fields: [createdById],references: [id],onDelete: NoAction)  
-  lastEditedBy User @relation("BoardEditor",fields: [lastEditedById],references: [id],onDelete: NoAction)
+  createdBy      User            @relation("BoardCreator", fields: [createdById], references: [id], onDelete: NoAction)
+  lastEditedBy   User            @relation("BoardEditor", fields: [lastEditedById], references: [id], onDelete: NoAction)
   boardSnapshots BoardSnapshot[]
-  comments Comment[]
+  comments       Comment[]
 
   @@index([workspaceId])
   @@index([createdById])
@@ -83,40 +92,40 @@ model Board {
 }
 
 model BoardSnapshot {
-  id  String  @id @default(uuid())
+  id      String @id @default(uuid())
   boardId String
-  board Board  @relation(fields: [boardId],references: [id],onDelete: Cascade)
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
-  snapshot Json?  // create time edge case "required"
+  snapshot Json? // create time edge case "required"
 
-  version Int
-  updatedAt DateTime   @updatedAt
-  @@unique([boardId,version])
+  version   Int
+  updatedAt DateTime @updatedAt
+
+  @@unique([boardId, version])
   @@index([boardId])
 }
 
 model Comment {
-  id String  @id @default(uuid())
+  id String @id @default(uuid())
 
-boardId String
-board Board @relation(fields: [boardId],references: [id],onDelete: Cascade)
+  boardId String
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
-userId String
-user User @relation(fields: [userId],references: [id],onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-shapeId String
+  shapeId String
 
-content String
+  content String
 
-resolved Boolean @default(false)
+  resolved Boolean @default(false)
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-@@index([boardId])
-@@index([userId])
+  @@index([boardId])
+  @@index([userId])
 }
-
 
 enum InvitationStatus {
   PENDING
@@ -124,12 +133,11 @@ enum InvitationStatus {
   EXPIRED
 }
 
-
 model Invitation {
-  id String  @id @default(uuid())
+  id String @id @default(uuid())
 
   workspaceId String
-  workspace Workspace @relation(fields: [workspaceId],references: [id],onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   email String
 
@@ -140,24 +148,72 @@ model Invitation {
   expiresAt DateTime
 
   createdAt DateTime @default(now())
+
   @@unique([workspaceId, email])
 }
 
 model File {
+  id String @id @default(uuid())
 
-id String @id @default(uuid())
+  url String
 
-url String
+  key String
 
-key String
+  mimeType String
 
-mimeType String
+  size Int
 
-size Int
+  uploadedById String
 
-uploadedById String
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
 
-uploadedBy User @relation(fields:[uploadedById],references:[id],onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
 
-createdAt DateTime @default(now())
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }

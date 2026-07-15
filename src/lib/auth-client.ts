@@ -1,11 +1,13 @@
-import { createAuthClient } from "better-auth/client";
-const authClient = createAuthClient();
+import { createAuthClient } from "better-auth/react";
 
-export const signInWithGoogle = async () => {
-  const data = await authClient.signIn.social({
+export const authClient = createAuthClient();
+
+export const AUTH_REDIRECT_PATH = "/workspace";
+
+export const signInWithGoogle = (callbackURL = AUTH_REDIRECT_PATH) =>
+  authClient.signIn.social({
     provider: "google",
+    callbackURL,
   });
-  return data;
-};
 
-export const { signIn, signUp, signOut, useSession } = createAuthClient();
+export const { signIn, signUp, signOut, useSession } = authClient;
