@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation";
-import { LogOut, User as UserIcon, Settings } from "lucide-react";
+import { LogOut, Settings2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import {
   SidebarMenu,
@@ -48,7 +48,7 @@ export function SidebarUser({ user, workspaceSlug }: SidebarUserProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={4} className="w-56">
             <DropdownMenuItem onClick={() => router.push(`/workspace/${workspaceSlug}/settings`)}>
-              <Settings className="size-4" />
+              <Settings2 className="size-4" />
               Workspace settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
