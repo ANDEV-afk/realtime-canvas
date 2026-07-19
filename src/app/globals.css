@@ -128,3 +128,5 @@
     @apply font-sans;
   }
 }
+
+/* Dialog z-index is handled in component files (z-[9999]) */

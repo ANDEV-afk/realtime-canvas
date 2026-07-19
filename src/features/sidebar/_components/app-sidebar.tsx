@@ -30,6 +30,9 @@ export function AppSidebar({ currentSlug }: AppSidebarProps) {
   const { data: session, isPending } = useSession();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshBoards = () => setRefreshKey(k => k + 1);
 
   useEffect(() => {
     if (isPending) return;
@@ -47,7 +50,7 @@ export function AppSidebar({ currentSlug }: AppSidebarProps) {
             .then(b => setBoards(Array.isArray(b) ? b : []));
         }
       });
-  }, [session, isPending, currentSlug, router]);
+  }, [session, isPending, currentSlug, router, refreshKey]);
 
   if (isPending) {
     return (
@@ -70,12 +73,12 @@ export function AppSidebar({ currentSlug }: AppSidebarProps) {
         <WorkspaceSwitcher workspaces={workspaces} currentSlug={currentSlug} />
       </SidebarHeader>
       <SidebarContent>
-        <BoardList boards={boards} workspaceSlug={currentSlug} />
+        <BoardList boards={boards} workspaceSlug={currentSlug} onBoardsChange={refreshBoards} />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border/50">
         <SidebarMenu>
           <SidebarMenuItem>
-            <CreateBoardButton workspaceSlug={currentSlug} />
+            <CreateBoardButton workspaceSlug={currentSlug} onCreated={refreshBoards} />
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarSeparator className="mx-2" />

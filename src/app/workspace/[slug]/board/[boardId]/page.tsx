@@ -4,6 +4,43 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TLComponents, Tldraw, useEditor } from 'tldraw';
+
+import 'tldraw/tldraw.css'
+import { CustomShareZone } from "@/components/tldrawcomponents/customfunctions";
+
+const tldrawComponents: TLComponents = {
+  SharePanel: CustomShareZone,
+};
+
+// 1. Ek chhota helper component banayein jo Tldraw instance ke state ko listen karega
+function ThemeSyncPlugin() {
+  const editor = useEditor();
+
+  useEffect(() => {
+    // Ek function jo check karega ki Tldraw ka active theme kya hai
+    const syncTheme = () => {
+      const isDark = editor.user.getIsDarkMode();
+      
+      // Pure HTML root element par class append karein taki Shadcn sidebar instantly background badal le
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    // First initial render par sync karein
+    syncTheme();
+
+    // Jab bhi user preference change ho, ye listen karega
+    const dispose = editor.store.listen((e) => {if (e.source === "user") syncTheme()});
+
+    return () => dispose();
+  }, [editor]);
+
+  return null;
+}
 
 export default function BoardPage() {
   const router = useRouter();
@@ -35,15 +72,31 @@ export default function BoardPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 items-center justify-center bg-muted/20 p-4">
-        <div className="flex h-full w-full max-w-6xl flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-background/50 p-8 text-center">
-          <p className="text-lg font-medium text-foreground">Canvas placeholder</p>
-          <p className="mt-2 max-w-md text-sm text-muted-foreground">
-            Board &quot;{board.title}&quot; is ready. The Tldraw canvas will render here.
-          </p>
-        </div>
-      </div>
+    <div className="h-full w-full relative">
+      <style>{`
+      /* Top-left bar ko proper alignment dene ke liye */
+      .tlui-layout__top__left {
+        margin-left: 44px !important;
+        margin-top: 4px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+      }
+
+      /* Dono internal containers ka background aur borders poori tarah saaf karne ke liye */
+      .tlui-buttons__horizontal,
+      .tlui-menu-zone {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+    `}</style>
+
+      <Tldraw persistenceKey={boardId} components={tldrawComponents}>
+        {/* 2. Is wrapper plugin ko Tldraw children tree ke andar render karein */}
+        <ThemeSyncPlugin />
+      </Tldraw>
     </div>
   );
 }

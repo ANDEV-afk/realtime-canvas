@@ -43,9 +43,10 @@ type Board = { id: string; title: string; updatedAt: string; createdBy: { name: 
 interface BoardListProps {
   boards: Board[];
   workspaceSlug: string;
+  onBoardsChange?: () => void;
 }
 
-export function BoardList({ boards, workspaceSlug }: BoardListProps) {
+export function BoardList({ boards, workspaceSlug, onBoardsChange }: BoardListProps) {
   const router = useRouter();
   const params = useParams();
   const currentBoardId = params?.boardId as string | undefined;
@@ -54,6 +55,7 @@ export function BoardList({ boards, workspaceSlug }: BoardListProps) {
   const [renameBoardId, setRenameBoardId] = useState<string | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [loading,setLoading] = useState(false);
 
   const filtered = boards.filter((b) =>
     b.title.toLowerCase().includes(search.toLowerCase())
@@ -61,15 +63,23 @@ export function BoardList({ boards, workspaceSlug }: BoardListProps) {
 
   const handleRename = async () => {
     if (!renameBoardId || !renameTitle.trim()) return;
-    await fetch(`/api/boards/${renameBoardId}`, {
+    setLoading(true);
+    const res = await fetch(`/api/boards/${renameBoardId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: renameTitle }),
     });
+    if (res.ok) {
+      const board = await res.json();
+      onBoardsChange?.();
+      router.push(`/workspace/${workspaceSlug}/board/${renameBoardId}`);
+    }
+    setLoading(false);
     setRenameOpen(false);
     setRenameBoardId(null);
     setRenameTitle("");
-  };
+    onBoardsChange?.(); // TODO: check if this is needed to be called here  
+  };  
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -78,6 +88,7 @@ export function BoardList({ boards, workspaceSlug }: BoardListProps) {
       router.push(`/workspace/${workspaceSlug}`);
     }
     setDeleteTarget(null);
+    onBoardsChange?.();
   };
 
   return (
@@ -169,8 +180,8 @@ export function BoardList({ boards, workspaceSlug }: BoardListProps) {
                 autoFocus
               />
             </div>
-            <Button type="submit" className="w-full">
-              Save
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Saving..." : "Save"}
             </Button>
           </form>
         </DialogContent>

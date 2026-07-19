@@ -2,7 +2,6 @@
 
 import { useParams } from "next/navigation";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/features/sidebar/_components/app-sidebar";
 
@@ -15,12 +14,15 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       <TooltipProvider>
         <AppSidebar currentSlug={slug} />
       </TooltipProvider>
-      <SidebarInset>
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-sidebar-border/50 bg-sidebar/30 px-4 backdrop-blur-sm">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <span className="text-sm font-medium text-foreground/80">{slug}</span>
-        </header>
+      
+      {/* 1. Added relative to SidebarInset so absolute children anchor to it */}
+      <SidebarInset className="p-0 relative h-screen w-full">
+        
+        {/* 2. Moved the trigger inside SidebarInset and changed fixed to absolute */}
+        <div className="absolute top-1.5 left-2 z-[9999]">
+          <SidebarTrigger className="rounded-lg h-9 w-9 flex items-center justify-center mr-3 cursor-pointer" />
+        </div>
+
         {children}
       </SidebarInset>
     </SidebarProvider>
