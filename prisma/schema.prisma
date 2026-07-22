@@ -65,7 +65,6 @@ model WorkspaceMember {
 
 enum WorkspaceRole {
   OWNER
-  ADMIN
   EDITOR
   VIEWER
 }

@@ -17,6 +17,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+// Jab Browser mein koi event hota hai (jaise user ne click kiya, scroll kiya, ya key press ki), toh browser automatically ek event despatch karta hai. window.dispatchEvent se tum browser ko bolte ho ki "Bhai, mera ek custom event triggered hua hai, pooray app mein sabko bata do!"
+
 interface WorkspaceSettingsFormProps {
   workspace: { id: string; name: string; slug: string };
 }
@@ -38,6 +40,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
             body: JSON.stringify({ name }),
           });
           if (res.ok) {
+            window.dispatchEvent(new Event("workspaces-changed"));
             router.push(`/workspace/${workspace.slug}`);
           }
         }}
@@ -77,7 +80,10 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
               <AlertDialogAction
                 onClick={async () => {
                   const res = await fetch(`/api/workspaces/${workspace.id}`, { method: "DELETE" });
-                  if (res.ok) router.push("/workspace");
+                  if (res.ok) {
+                    window.dispatchEvent(new Event("workspaces-changed"));
+                    router.push("/workspace");
+                  }
                 }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
               >

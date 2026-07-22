@@ -10,13 +10,14 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkspaceSwitcher } from "@/features/workspace/_components/workspace-switcher";
 import { BoardList } from "@/features/board/_components/board-list";
 import { CreateBoardButton } from "@/features/board/_components/create-board-button";
 import { SidebarUser } from "./sidebar-user";
+import { Separator } from "@/components/ui/separator";
+import ManageBoard from "@/features/board/_components/manage-board";
 
 interface AppSidebarProps {
   currentSlug: string;
@@ -33,6 +34,12 @@ export function AppSidebar({ currentSlug }: AppSidebarProps) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const refreshBoards = () => setRefreshKey(k => k + 1);
+
+  useEffect(() => {
+    const handler = () => setRefreshKey(k => k + 1);
+    window.addEventListener("workspaces-changed", handler);
+    return () => window.removeEventListener("workspaces-changed", handler);
+  }, []);
 
   useEffect(() => {
     if (isPending) return;
@@ -67,12 +74,23 @@ export function AppSidebar({ currentSlug }: AppSidebarProps) {
 
   if (!session) return null;
 
+  const currentWorkspace = workspaces.find((w) => w.slug === currentSlug) || null;
+
+  const handleWorkspaceUpdate = (updated: Workspace) => {
+    setWorkspaces((prev) =>
+      prev.map((w) => (w.id === updated.id ? updated : w))
+    );
+  };
+
   return (
     <Sidebar>
       <SidebarHeader>
         <WorkspaceSwitcher workspaces={workspaces} currentSlug={currentSlug} />
       </SidebarHeader>
+      <Separator className="md-2"/>
       <SidebarContent>
+        <ManageBoard workspace={currentWorkspace} onWorkspaceUpdate={handleWorkspaceUpdate}/>
+        <Separator/>
         <BoardList boards={boards} workspaceSlug={currentSlug} onBoardsChange={refreshBoards} />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border/50">
@@ -81,7 +99,7 @@ export function AppSidebar({ currentSlug }: AppSidebarProps) {
             <CreateBoardButton workspaceSlug={currentSlug} onCreated={refreshBoards} />
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarSeparator className="mx-2" />
+        <Separator/>
         <SidebarUser user={session.user} workspaceSlug={currentSlug} />
       </SidebarFooter>
     </Sidebar>
