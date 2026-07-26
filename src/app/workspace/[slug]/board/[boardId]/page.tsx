@@ -133,24 +133,38 @@ export default function BoardPage() {
 
   return (
     <div className="h-full w-full relative">
-      <style>{`
+        <style>{`
+        /* Offset top-left controls for app sidebar */
         .tlui-layout__top__left {
           margin-left: 44px !important;
           margin-top: 4px !important;
-          display: flex !important;
-          align-items: center !important;
-          gap: 8px !important;
         }
 
-        .tlui-buttons__horizontal,
-        .tlui-menu-zone {
+        /* Share zone: avatars left, share button flush right */
+        .tlui-share-zone {
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          justify-content: flex-end !important;
+          gap: 12px !important;
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          pointer-events: auto !important;
+          z-index: 9999 !important;
+        }
+
+        /* Remove default tldraw pill background and borders */
+        .tlui-share-zone__button,
+        .tlui-navigation-zone,
+        .tlui-menu-zone,
+        .tlui-buttons__horizontal {
           background: transparent !important;
           background-color: transparent !important;
           border: none !important;
           box-shadow: none !important;
         }
       `}</style>
-
       <Room roomId={boardId}>
         <InnerBoard
           boardId={boardId}

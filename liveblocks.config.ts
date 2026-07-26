@@ -3,7 +3,10 @@ import { LiveMap, JsonObject } from "@liveblocks/client";
 declare global {
   interface Liveblocks {
     // Liveblocks Presence
-    Presence: JsonObject;
+    Presence: {
+      cursor: { x: number; y: number } | null;
+      selection: string[] | null;
+    };
 
     // LiveMap storage - JsonObject constraint ko exact satisfy karta hai
     Storage: {

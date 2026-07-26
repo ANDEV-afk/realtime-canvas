@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { ActiveUsers } from "@/features/board/_components/ActiveUsers";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export const CustomShareZone = () => {
   const { data: session } = useSession();
@@ -10,42 +11,35 @@ export const CustomShareZone = () => {
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
+    const url = window.location.href;
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
-      setTimeout(() => setCopied(false), 300000);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy link: ", err);
     }
   };
 
-  // 1. Agar User Logged in NAHI hai -> "Sign in to share"
-  if (!session?.user) {
-    return (
-      <div className="pointer-events-auto">
+  return (
+    <div className="tlui-share-zone flex shrink-0 items-center gap-3 relative z-[9999]" draggable={false}>
+      <ActiveUsers />
+
+      {!session?.user ? (
         <button
           onClick={() => router.push("/login")}
-          className="px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md hover:shadow-xl transition-all duration-200 mr-3 mt-1 mb-2 cursor-pointer flex items-center gap-2"
+          className="shrink-0 px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md transition-all duration-200 cursor-pointer whitespace-nowrap pointer-events-auto"
         >
-          <span>Sign in to share</span>
+          Sign in to share
         </button>
-      </div>
-    );
-  }
-
-  // 2. Agar User Logged in HAI -> Full Share Button
-  return (
-    <div className="pointer-events-auto">
-      <button
-        onClick={handleShare}
-        className="px-6 py-2 rounded-full bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium focus:ring-2 focus:ring-blue-400 hover:shadow-xl transition-all duration-200 mr-3 mt-1 mb-2 cursor-pointer flex items-center gap-2"
-      >
-        {copied ? (
-          <span>Copied!</span>
-        ) : (
-          <span>Share</span>
-        )}
-      </button>
+      ) : (
+        <button
+          onClick={handleShare}
+          className="shrink-0 px-5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md transition-all duration-200 cursor-pointer whitespace-nowrap pointer-events-auto"
+        >
+          {copied ? "Copied!" : "Share"}
+        </button>
+      )}
     </div>
   );
 };

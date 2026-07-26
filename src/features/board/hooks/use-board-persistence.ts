@@ -19,7 +19,7 @@ export function useBoardPersistence({
   editor,
   boardId,
   initialSnapshot,
-  debounceMs = 2000,
+  debounceMs = 1000,
 }: UseBoardPersistenceOptions) {
   const timerRef = useRef<NodeJS.Timeout | null>(null); // timerRef is used to debounce the save
   const isHydrated = useRef(false); // isHydrated is used to check if the board is loaded

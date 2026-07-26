@@ -10,9 +10,9 @@ const liveblocks = new Liveblocks({
 export async function POST(request: NextRequest) {
   try {
     // Session safely resolve karo without failing
-    const sessionData = await auth.api
-      .getSession({ headers: await headers() })
-      .catch(() => null);
+    const sessionData = await auth.api.getSession({ 
+      headers: await headers(),
+    }).catch(() => null);
 
     // 1. Logged in user hai toh real ID & Details, otherwise Guest Fallback
     const userId =
