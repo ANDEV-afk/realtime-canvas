@@ -1,20 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TLComponents, Tldraw, useEditor, type TLStoreSnapshot } from "tldraw";
-
 import "tldraw/tldraw.css";
 import { CustomShareZone } from "@/components/tldrawcomponents/customfunctions";
 import { useBoardPersistence } from "@/features/board/hooks/use-board-persistence";
+import { useStorageStore } from "@/hooks/useStorageStore";
+import { Room } from "@/components/Room";
 
+// Register custom share button component into tldraw UI
 const tldrawComponents: TLComponents = {
   SharePanel: CustomShareZone,
 };
 
- //Handles automatic dark mode sync between TLDraw state and the App root.
+// Plugin to synchronize tldraw dark mode setting with HTML document class
 function ThemeSyncPlugin() {
   const editor = useEditor();
 
@@ -40,15 +42,17 @@ function ThemeSyncPlugin() {
   return null;
 }
 
-//Connects persistence logic cleanly inside the Tldraw Context tree.
-
-function BoardPersistence({boardId,initialSnapshot}: {
+// Connects DB persistence logic cleanly inside the Tldraw Context tree
+function BoardPersistence({
+  boardId,
+  initialSnapshot,
+}: {
   boardId: string;
   initialSnapshot: Record<string, unknown> | null;
 }) {
   const editor = useEditor();
 
-  useBoardPersistence({ // this hook is used to persist the board snapshot to the database
+  useBoardPersistence({
     editor,
     boardId,
     initialSnapshot: initialSnapshot as unknown as TLStoreSnapshot | null,
@@ -57,33 +61,71 @@ function BoardPersistence({boardId,initialSnapshot}: {
   return null;
 }
 
-export default function BoardPage() {
-  const router = useRouter();
-  const params = useParams();
-  const slug = params?.slug as string;
-  const boardId = params?.boardId as string;
-  const { data: session, isPending } = useSession();
-  const [board, setBoard] = useState<{title: string;snapshot: Record<string, unknown> | null} | null>(null);
+// Real-time Collaborative Canvas Inner Component
+function InnerBoard({
+  boardId,
+  initialSnapshot,
+  user,
+}: {
+  boardId: string;
+  initialSnapshot: Record<string, unknown> | null;
+  user: { id: string; name: string; color: string };
+}) {
+  const storeWithStatus = useStorageStore({ user });
 
+  // 1. Check if storage store is fully initialized
+  const isReady = storeWithStatus.status !== "loading" && storeWithStatus.store;
+  if (!isReady) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <Skeleton className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Connecting to live board...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Render tldraw Canvas
+  return (
+    <Tldraw store={storeWithStatus} components={tldrawComponents}>
+      <ThemeSyncPlugin />
+      <BoardPersistence boardId={boardId} initialSnapshot={initialSnapshot} />
+    </Tldraw>
+  );
+}
+
+export default function BoardPage() {
+  const params = useParams();
+  const boardId = params?.boardId as string;
+  
+  // Get session status (optional now for guest access)
+  const { data: session, isPending: isSessionPending } = useSession();
+
+  const [board, setBoard] = useState<{
+    title: string;
+    snapshot: Record<string, unknown> | null;
+  } | null>(null);
+
+  // Fetch initial board state without blocking non-logged-in users
   useEffect(() => {
-    if (isPending) return;
-    if (!session) {
-      router.replace("/login");
-      return;
-    }
     if (!boardId) return;
 
     fetch(`/api/boards/${boardId}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!data) router.replace(`/workspace/${slug}`);
-        else setBoard(data);
+        // Fallback to empty snapshot if user is guest or board not found in DB
+        setBoard(data || { title: "Shared Board", snapshot: null });
+      })
+      .catch(() => {
+        setBoard({ title: "Shared Board", snapshot: null });
       });
-  }, [session, isPending, boardId, slug, router]);
+  }, [boardId]);
 
-  if (isPending || !board) {
+  // Loading state while board metadata is being fetched
+  if (isSessionPending || !board || !session) {
     return (
-      <div className="flex flex-1 items-center justify-center p-4">
+      <div className="flex flex-1 items-center justify-center p-4 h-screen w-full">
         <Skeleton className="h-64 w-full max-w-6xl rounded-2xl" />
       </div>
     );
@@ -109,13 +151,17 @@ export default function BoardPage() {
         }
       `}</style>
 
-      <Tldraw components={tldrawComponents}>
-        <ThemeSyncPlugin />
-        <BoardPersistence
+      <Room roomId={boardId}>
+        <InnerBoard
           boardId={boardId}
           initialSnapshot={board.snapshot}
+          user={{
+            id: session!.user.id,
+            name: session!.user.name || "Anonymous",
+            color: "#3b82f6",
+          }}
         />
-      </Tldraw>
+      </Room>
     </div>
   );
 }

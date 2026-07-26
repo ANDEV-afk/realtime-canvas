@@ -9,8 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@liveblocks/client": "^3.22.0",
-    "@liveblocks/react": "^3.22.0",
+    "@liveblocks/client": "^3.23.0",
+    "@liveblocks/node": "^3.23.0",
+    "@liveblocks/react": "^3.23.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.9.0",
     "bcrypt": "^6.0.0",
