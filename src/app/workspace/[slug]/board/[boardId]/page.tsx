@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TLComponents, Tldraw, useEditor, type TLStoreSnapshot } from "tldraw";
@@ -98,8 +98,9 @@ function InnerBoard({
 export default function BoardPage() {
   const params = useParams();
   const boardId = params?.boardId as string;
-  
-  // Get session status (optional now for guest access)
+  const router = useRouter();
+
+  // Get session status
   const { data: session, isPending: isSessionPending } = useSession();
 
   const [board, setBoard] = useState<{
@@ -107,22 +108,35 @@ export default function BoardPage() {
     snapshot: Record<string, unknown> | null;
   } | null>(null);
 
-  // Fetch initial board state without blocking non-logged-in users
-  useEffect(() => {
-    if (!boardId) return;
+  // Strict Membership & Board Fetching Logic
+useEffect(() => {
+  if (!boardId || isSessionPending) return;
 
-    fetch(`/api/boards/${boardId}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        // Fallback to empty snapshot if user is guest or board not found in DB
-        setBoard(data || { title: "Shared Board", snapshot: null });
-      })
-      .catch(() => {
-        setBoard({ title: "Shared Board", snapshot: null });
-      });
-  }, [boardId]);
+  if (!session) {
+    // Current URL save kar taaki login ke baad direct yahi aaye
+    const currentPath = window.location.pathname;
+    router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+    return;
+  }
 
-  // Loading state while board metadata is being fetched
+  fetch(`/api/boards/${boardId}`)
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then((data) => {
+      if (data) setBoard(data);
+    })
+    .catch((err) => {
+      console.error("Failed to load board:", err);
+      // Blindly /workspace par throw karne ke bajaye yahan error handle kar
+      router.push("/workspace?error=board_not_found");
+    });
+  }, [boardId, session, isSessionPending, router]);
+
+  // Loading state while verifying user membership & fetching board metadata
   if (isSessionPending || !board || !session) {
     return (
       <div className="flex flex-1 items-center justify-center p-4 h-screen w-full">
@@ -133,7 +147,7 @@ export default function BoardPage() {
 
   return (
     <div className="h-full w-full relative">
-        <style>{`
+      <style>{`
         /* Offset top-left controls for app sidebar */
         .tlui-layout__top__left {
           margin-left: 44px !important;
@@ -170,8 +184,8 @@ export default function BoardPage() {
           boardId={boardId}
           initialSnapshot={board.snapshot}
           user={{
-            id: session!.user.id,
-            name: session!.user.name || "Anonymous",
+            id: session.user.id,
+            name: session.user.name || "Anonymous",
             color: "#3b82f6",
           }}
         />

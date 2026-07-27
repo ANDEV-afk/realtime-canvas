@@ -19,6 +19,10 @@ export function Room({ roomId, children }: RoomProps) {
     <LiveblocksProvider authEndpoint="/api/liveblock-auth">
       <RoomProvider 
       id={roomId}
+      initialPresence={{
+        cursor: null,
+        selection: null,
+      }}
       initialStorage={{
         records: new LiveMap(),
       }}

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Copy, Check, Crown, Trash2, Users, Settings2, Loader2 } from "lucide-react";
+import { Settings, Copy, Check, Crown, Trash2, Users, Settings2, Loader2, RefreshCw } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,8 +43,8 @@ type Member = {
 };
 
 interface ManageBoardProps {
-  workspace: { id: string; name: string; slug: string } | null;
-  onWorkspaceUpdate?: (workspace: { id: string; name: string; slug: string }) => void;
+  workspace: { id: string; name: string; slug: string; inviteCode?: string } | null;
+  onWorkspaceUpdate?: (workspace: { id: string; name: string; slug: string; inviteCode?: string }) => void;
 }
 
 export default function ManageBoard({ workspace, onWorkspaceUpdate }: ManageBoardProps) {
@@ -64,8 +64,7 @@ export default function ManageBoard({ workspace, onWorkspaceUpdate }: ManageBoar
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const isOwner = workspace && session && members.some(
-    (m) => m.user.id === session.user.id && m.role === "OWNER"
-  );
+  (m) => m.user.id === session.user.id && m.role === "OWNER");
 
   useEffect(() => {
     setWorkspaceName(workspace?.name || "");
@@ -92,9 +91,14 @@ export default function ManageBoard({ workspace, onWorkspaceUpdate }: ManageBoar
     }
   }, [open, workspace, fetchMembers]);
 
+  // FIX: Direct Fixed Invite Code Link
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const inviteLink = workspace?.inviteCode
+  ? `${origin}/invite/${workspace.inviteCode}`
+  : `${origin}/workspace/${workspace?.slug}/invite`;
+
   const handleCopyInviteLink = async () => {
     if (!workspace) return;
-    const inviteLink = `${window.location.origin}/workspace/${workspace.slug}/invite`;
     await navigator.clipboard.writeText(inviteLink);
     setCopied(true);
     toast.success("Invite link copied to clipboard");
@@ -227,23 +231,34 @@ export default function ManageBoard({ workspace, onWorkspaceUpdate }: ManageBoar
                 </TabsList>
 
                 <TabsContent value="members" className="space-y-4 mt-4">
-                  <div className="space-y-3">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleCopyInviteLink}>
-                      {copied ? (<><Check className="mr-2 h-4 w-4" />Copied!</>) : (
-                      <><Copy className="mr-2 h-4 w-4" />Copy Invite Link</>)}
-                    </Button>
-                  </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-muted-foreground">Invite teammates</Label>
+                      <Button 
+                        onClick={handleCopyInviteLink} 
+                        className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium flex items-center justify-center gap-2 py-2.5 rounded-lg border-none shadow-none"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="h-4 w-4" />
+                            Link Copied!
+                          </>
+                        ) : (
+                          <>
+                            <span>Copy Invite link</span>
+                            <Copy className="h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3 pt-2">
                     <Label>Members ({members.length})</Label>
                     {loading ? (
                       <div className="text-sm text-muted-foreground flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading members...
-                      </div>) : (
+                      </div>
+                    ) : (
                       <div className="space-y-2">
                         {members.map((member) => (
                           <div
@@ -353,6 +368,7 @@ export default function ManageBoard({ workspace, onWorkspaceUpdate }: ManageBoar
         </SidebarMenuItem>
       </SidebarMenu>
 
+      {/* Delete / Transfer / Remove Modals */}
       <AlertDialog open={!!memberToRemove} onOpenChange={(open) => { if (!open) setMemberToRemove(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>

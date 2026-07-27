@@ -30,10 +30,11 @@ model User {
 }
 
 model Workspace {
-  id   String  @id @default(uuid())
-  name String
-  slug String  @unique
-  icon String?
+  id         String   @id @default(uuid())
+  name       String
+  slug       String   @unique
+  icon       String?
+  inviteCode String   @unique @default(uuid()) // <--- ADD THIS
 
   ownerId String
   owner   User   @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -45,6 +46,7 @@ model Workspace {
   invitations Invitation[]
 
   @@index([ownerId])
+  @@index([inviteCode]) // <--- ADD THIS FOR FAST LOOKUPS
 }
 
 model WorkspaceMember {

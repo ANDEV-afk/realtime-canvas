@@ -26,7 +26,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ boar
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { boardId } = await params;
-  const board = await getBoard(boardId, session.user.id);
+
+  // Direct Board Fetch - Workspace membership mandatory nahi hai link access ke liye
+  const board = await prisma.board.findUnique({
+    where: { id: boardId },
+    include: {
+      workspace: { select: { slug: true } },
+      createdBy: { select: { name: true } },
+    },
+  });
+
   if (!board) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   return NextResponse.json(board);
