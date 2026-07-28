@@ -10,6 +10,7 @@ import { CustomShareZone } from "@/components/tldrawcomponents/customfunctions";
 import { useBoardPersistence } from "@/features/board/hooks/use-board-persistence";
 import { useStorageStore } from "@/hooks/useStorageStore";
 import { Room } from "@/components/Room";
+import { customAssetStore } from "@/lib/upload-asset";
 
 // Register custom share button component into tldraw UI
 const tldrawComponents: TLComponents = {

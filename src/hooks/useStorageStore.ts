@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRoom } from "@liveblocks/react/suspense";
 import { JsonObject } from "@tldraw/utils";
+import { customAssetStore } from "@/lib/upload-asset";
 import {
   computed,
   createPresenceStateDerivation,
@@ -47,6 +48,7 @@ export function useStorageStore({
   const [store] = useState(() => {
     return createTLStore({
       shapeUtils: [...defaultShapeUtils, ...shapeUtils],
+      assets: customAssetStore,
     });
   });
 
@@ -91,8 +93,19 @@ export function useStorageStore({
         );
       }
 
-      // Populate Liveblocks Storage records safely
-      const storedLiveRecords = Array.from(liveRecords.values());
+      // Populate Liveblocks Storage records safely with asset sanitization
+      const storedLiveRecords = Array.from(liveRecords.values()).map((record) => {
+        if (record.typeName === "asset" && record.props && typeof record.props === "object") {
+          return {
+            ...record,
+            props: {
+              ...record.props,
+              src: (record.props as any).src || "",
+            },
+          } as unknown as TLRecord;
+        }
+        return record;
+      });
       recordsToPut.push(...storedLiveRecords);
       store.put(recordsToPut, "initialize");
 

@@ -91,7 +91,7 @@ export function AppSidebar({ currentSlug }: AppSidebarProps) {
       <SidebarContent>
         <ManageBoard workspace={currentWorkspace} onWorkspaceUpdate={handleWorkspaceUpdate}/>
         <Separator/>
-        <BoardList boards={boards} workspaceSlug={currentSlug} onBoardsChange={refreshBoards} />
+        <BoardList boards={boards} workspaceSlug={currentSlug} workspaceId={currentWorkspace?.id} onBoardsChange={refreshBoards} />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border/50">
         <SidebarMenu>
