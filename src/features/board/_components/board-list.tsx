@@ -117,7 +117,7 @@ export function BoardList({ boards, workspaceSlug, workspaceId, onBoardsChange }
       link.download = `${safeTitle}.tldraw`;
       link.click();
       URL.revokeObjectURL(url);
-      toast.success("Board downloaded successfully (.tldraw)");
+      toast.success("Board downloading (.tldraw)");
     } catch (error) {
       console.error("Download Error:", error);
       toast.error("Failed to download board");

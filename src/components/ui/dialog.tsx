@@ -55,6 +55,10 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  React.useEffect(() => {
+    window.dispatchEvent(new CustomEvent("close-popovers"));
+  }, []);
+
   return (
     <DialogPortal>
       <DialogOverlay />

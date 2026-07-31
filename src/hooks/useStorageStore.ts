@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRoom } from "@liveblocks/react/suspense";
 import { JsonObject } from "@tldraw/utils";
-import { customAssetStore } from "@/lib/upload-asset";
 import {
   computed,
   createPresenceStateDerivation,
@@ -48,7 +47,6 @@ export function useStorageStore({
   const [store] = useState(() => {
     return createTLStore({
       shapeUtils: [...defaultShapeUtils, ...shapeUtils],
-      assets: customAssetStore,
     });
   });
 
@@ -176,15 +174,27 @@ export function useStorageStore({
           ({ changes }: TLStoreEventInfo) => {
             room.batch(() => {
               Object.values(changes.added).forEach((record) => {
-                liveRecords.set(record.id, record);
+                try {
+                  liveRecords.set(record.id, record);
+                } catch {
+                  // Read-only user write prevention
+                }
               });
 
               Object.values(changes.updated).forEach(([, record]) => {
-                liveRecords.set(record.id, record);
+                try {
+                  liveRecords.set(record.id, record);
+                } catch {
+                  // Read-only user write prevention
+                }
               });
 
               Object.values(changes.removed).forEach((record) => {
-                liveRecords.delete(record.id);
+                try {
+                  liveRecords.delete(record.id);
+                } catch {
+                  // Read-only user write prevention
+                }
               });
             });
           },

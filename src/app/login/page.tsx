@@ -34,10 +34,14 @@ export default function LoginPage() {
         return;
       }
 
+      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const redirectTo = searchParams?.get("redirect") || AUTH_REDIRECT_PATH;
+
       const data: SignInInput = parsedData.data;
       const res = await signIn.email({
         email: data.email,
         password: data.password,
+        callbackURL: redirectTo,
       });
 
       if (res.error) {
@@ -45,7 +49,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push(AUTH_REDIRECT_PATH);
+      router.push(redirectTo);
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -59,7 +63,10 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await signInWithGoogle();
+      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const redirectTo = searchParams?.get("redirect") || AUTH_REDIRECT_PATH;
+
+      const res = await signInWithGoogle(redirectTo);
       if (res.error) {
         setError(res.error.message || "Google sign in failed");
         setGoogleLoading(false);

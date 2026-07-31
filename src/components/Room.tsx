@@ -16,7 +16,7 @@ interface RoomProps {
 
 export function Room({ roomId, children }: RoomProps) {
   return (
-    <LiveblocksProvider authEndpoint="/api/liveblock-auth">
+    <LiveblocksProvider authEndpoint={`/api/boards/${roomId}/access`}>
       <RoomProvider 
       id={roomId}
       initialPresence={{

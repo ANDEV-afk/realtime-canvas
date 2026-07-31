@@ -79,6 +79,7 @@ model Board {
   thumbnail      String?
   snapshot       Json
   workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  accessMode  String   @default("editor") // "editor" ya "viewer" — "Anyone with the link" permission
   updatedAt      DateTime  @updatedAt
   createdAt      DateTime  @default(now())
   createdById    String

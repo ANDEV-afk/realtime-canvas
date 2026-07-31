@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { ActiveUsers } from "@/features/board/_components/ActiveUsers";
-import { ShareModal } from "./ShareModal";
+import { ShareModal } from "../ShareModal";
 
 export const CustomShareZone = () => {
   const params = useParams();
