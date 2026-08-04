@@ -29,8 +29,11 @@ export function Room({ roomId, children }: RoomProps) {
       >
         <ClientSideSuspense
           fallback={
-            <div className="flex h-screen w-full items-center justify-center p-4">
-              <Skeleton className="h-64 w-full max-w-6xl rounded-2xl" />
+            <div className="flex h-full w-full items-center justify-center bg-zinc-950">
+              <div className="flex flex-col items-center gap-2">
+                <Skeleton className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent bg-zinc-900" />
+                <p className="text-sm text-zinc-400">Connecting to live board...</p>
+              </div>
             </div>
           }
         >

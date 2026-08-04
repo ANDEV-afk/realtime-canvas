@@ -11,6 +11,7 @@ import { ShareModal } from "@/components/ShareModal";
 import { useBoardPersistence } from "@/features/board/hooks/use-board-persistence";
 import { useStorageStore } from "@/hooks/useStorageStore";
 import { Room } from "@/components/Room";
+import { VersionHistoryModal } from "@/features/board/_components/VersionHistoryModal";
 
 interface BoardData {
   id: string;
@@ -61,9 +62,11 @@ function ReadOnlyControlled({ isReadOnly }: { isReadOnly: boolean }) {
 function BoardPersistence({
   boardId,
   initialSnapshot,
+  isReadOnly,
 }: {
   boardId: string;
   initialSnapshot: Record<string, unknown> | null;
+  isReadOnly: boolean;
 }) {
   const editor = useEditor();
 
@@ -71,6 +74,7 @@ function BoardPersistence({
     editor,
     boardId,
     initialSnapshot: initialSnapshot as unknown as TLStoreSnapshot | null,
+    isReadOnly,
   });
 
   return null;
@@ -90,16 +94,16 @@ function InnerBoard({
   isOwner: boolean;
   user: { id: string; name: string; color: string };
 }) {
-  const storeWithStatus = useStorageStore({ user });
+  const readOnly = !isOwner && accessMode === "viewer";
 
-  // 1. Check if storage store is fully initialized
-  const isReady = storeWithStatus.status !== "loading" && storeWithStatus.store;
-  if (!isReady) {
+  // Pass readOnly flag to prevent liveblocks write storage error for viewers
+  const storeWithStatus = useStorageStore({ user, isReadOnly: readOnly });
+  if (storeWithStatus.status === "loading") {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-background">
+      <div className="flex h-full w-full items-center justify-center bg-zinc-950">
         <div className="flex flex-col items-center gap-2">
-          <Skeleton className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Connecting to live board...</p>
+          <Skeleton className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent bg-zinc-900" />
+          <p className="text-sm text-zinc-400">Connecting to live board...</p>
         </div>
       </div>
     );
@@ -112,6 +116,7 @@ function InnerBoard({
       draggable={false}
     >
       <ActiveUsers />
+      <VersionHistoryModal boardId={boardId} isOwner={isOwner} />
       <ShareModal boardId={boardId} initialAccessMode={accessMode} isOwner={isOwner} />
     </div>
   );
@@ -120,15 +125,15 @@ function InnerBoard({
     SharePanel: CustomShareZone,
   };
 
-  const readOnly = !isOwner && accessMode === "viewer";
-
   // 2. Render tldraw Canvas
   return (
-    <Tldraw store={storeWithStatus} components={tldrawComponents}>
-      <ThemeSyncPlugin />
-      <ReadOnlyControlled isReadOnly={readOnly} />
-      <BoardPersistence boardId={boardId} initialSnapshot={initialSnapshot} />
-    </Tldraw>
+    <div className="absolute inset-0 h-full w-full">
+      <Tldraw store={storeWithStatus} components={tldrawComponents}>
+        <ThemeSyncPlugin />
+        <ReadOnlyControlled isReadOnly={readOnly} />
+        <BoardPersistence boardId={boardId} initialSnapshot={initialSnapshot} isReadOnly={readOnly} />
+      </Tldraw>
+    </div>
   );
 }
 
@@ -136,6 +141,11 @@ export default function BoardPage() {
   const params = useParams();
   const boardId = params?.boardId as string;
   const router = useRouter();
+
+  // Ensure dark mode is active on mount to prevent white flash
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
 
   // Get session status
   const { data: session, isPending: isSessionPending } = useSession();
@@ -171,8 +181,8 @@ export default function BoardPage() {
   // Loading state while verifying user membership & fetching board metadata
   if (isSessionPending || !board || !session) {
     return (
-      <div className="flex flex-1 items-center justify-center p-4 h-screen w-full">
-        <Skeleton className="h-64 w-full max-w-6xl rounded-2xl" />
+      <div className="flex flex-1 items-center justify-center p-4 h-screen w-full bg-zinc-950">
+        <Skeleton className="h-64 w-full max-w-6xl rounded-2xl bg-zinc-900" />
       </div>
     );
   }

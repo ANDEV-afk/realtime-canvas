@@ -32,6 +32,7 @@ import {
 export function useStorageStore({
   shapeUtils = [],
   user,
+  isReadOnly,
 }: Partial<{
   hostUrl: string;
   version: number;
@@ -41,6 +42,7 @@ export function useStorageStore({
     color: string;
     name: string;
   };
+  isReadOnly: boolean;
 }>) {
   const room = useRoom();
 
