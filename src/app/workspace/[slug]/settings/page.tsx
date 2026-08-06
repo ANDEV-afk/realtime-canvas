@@ -11,7 +11,12 @@ export default function WorkspaceSettingsPage() {
   const params = useParams();
   const slug = params?.slug as string;
   const { data: session, isPending } = useSession();
-  const [workspace, setWorkspace] = useState<{ id: string; name: string; slug: string } | null>(null);
+  const [workspace, setWorkspace] = useState<{ id: string; name: string; slug: string; icon: string | null } | null>(null);
+
+  // Ensure dark mode is active on mount to prevent white flash
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
 
   useEffect(() => {
     if (isPending) return;
@@ -30,15 +35,15 @@ export default function WorkspaceSettingsPage() {
 
   if (isPending || !workspace) {
     return (
-      <div className="mx-auto max-w-2xl p-6">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <Skeleton className="h-32 w-full" />
+      <div className="mx-auto max-w-2xl p-6 bg-zinc-950 min-h-screen">
+        <Skeleton className="h-8 w-48 mb-6 bg-zinc-900" />
+        <Skeleton className="h-32 w-full bg-zinc-900" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-6">
+    <div className="mx-auto max-w-2xl p-6 bg-zinc-950 min-h-screen text-foreground">
       <h1 className="text-2xl font-semibold mb-6">Workspace settings</h1>
       <WorkspaceSettingsForm workspace={workspace} />
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,12 +47,12 @@ function ThemeSyncPlugin() {
   return null;
 }
 
-// Safely controls tldraw read-only state via instance update (TypeScript safe)
+// Safely controls tldraw read-only state via official editor method
 function ReadOnlyControlled({ isReadOnly }: { isReadOnly: boolean }) {
   const editor = useEditor();
 
   useEffect(() => {
-    editor.updateInstanceState({ isReadonly: isReadOnly });
+    editor.setReadOnly(isReadOnly);
   }, [editor, isReadOnly]);
 
   return null;
@@ -98,6 +98,24 @@ function InnerBoard({
 
   // Pass readOnly flag to prevent liveblocks write storage error for viewers
   const storeWithStatus = useStorageStore({ user, isReadOnly: readOnly });
+
+  // Memoize custom Tldraw UI components to prevent unmounting on state updates
+  const tldrawComponents: TLComponents = useMemo(
+    () => ({
+      SharePanel: () => (
+        <div
+          className="tlui-share-zone flex shrink-0 items-center gap-3 relative z-[9999]"
+          draggable={false}
+        >
+          <ActiveUsers />
+          <VersionHistoryModal boardId={boardId} isOwner={isOwner} />
+          <ShareModal boardId={boardId} initialAccessMode={accessMode} isOwner={isOwner} />
+        </div>
+      ),
+    }),
+    [boardId, accessMode, isOwner]
+  );
+
   if (storeWithStatus.status === "loading") {
     return (
       <div className="flex h-full w-full items-center justify-center bg-zinc-950">
@@ -109,29 +127,16 @@ function InnerBoard({
     );
   }
 
-  // Custom Share Zone with Editor/Viewer ShareModal & Active Users
-  const CustomShareZone = () => (
-    <div
-      className="tlui-share-zone flex shrink-0 items-center gap-3 relative z-[9999]"
-      draggable={false}
-    >
-      <ActiveUsers />
-      <VersionHistoryModal boardId={boardId} isOwner={isOwner} />
-      <ShareModal boardId={boardId} initialAccessMode={accessMode} isOwner={isOwner} />
-    </div>
-  );
-
-  const tldrawComponents: TLComponents = {
-    SharePanel: CustomShareZone,
-  };
-
-  // 2. Render tldraw Canvas
   return (
     <div className="absolute inset-0 h-full w-full">
-      <Tldraw store={storeWithStatus} components={tldrawComponents}>
+      <Tldraw store={storeWithStatus} components={tldrawComponents} autoFocus>
         <ThemeSyncPlugin />
         <ReadOnlyControlled isReadOnly={readOnly} />
-        <BoardPersistence boardId={boardId} initialSnapshot={initialSnapshot} isReadOnly={readOnly} />
+        <BoardPersistence
+          boardId={boardId}
+          initialSnapshot={initialSnapshot}
+          isReadOnly={readOnly}
+        />
       </Tldraw>
     </div>
   );
@@ -198,7 +203,7 @@ export default function BoardPage() {
           margin-top: 4px !important;
         }
 
-        /* Share zone: avatars left, share button flush right */
+        /* Share zone styling */
         .tlui-share-zone {
           display: flex !important;
           flex-direction: row !important;
@@ -223,6 +228,7 @@ export default function BoardPage() {
           box-shadow: none !important;
         }
       `}</style>
+
       <Room roomId={boardId}>
         <InnerBoard
           boardId={boardId}

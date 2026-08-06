@@ -15,10 +15,7 @@ async function getWorkspace(workspaceId: string, userId: string) {
   });
 }
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ workspaceId: string }> }
-) {
+export async function GET(req: NextRequest,{ params }: { params: Promise<{ workspaceId: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -29,10 +26,7 @@ export async function GET(
   return NextResponse.json(workspace);
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ workspaceId: string }> }
-) {
+export async function PATCH(req: NextRequest,{ params }: { params: Promise<{ workspaceId: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -43,21 +37,21 @@ export async function PATCH(
     return NextResponse.json({ error: "Only the owner can update" }, { status: 403 });
   }
 
-  const { name } = await req.json();
+  const { name, icon } = await req.json();
   if (!name?.trim()) return NextResponse.json({ error: "Workspace name is required" }, { status: 400 });
 
   const updated = await prisma.workspace.update({
     where: { id: workspaceId },
-    data: { name },
+    data: {
+      ...(name && { name }),
+      ...(icon !== undefined && { icon }),
+    },
   });
 
   return NextResponse.json(updated);
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ workspaceId: string }> }
-) {
+export async function DELETE(req: NextRequest,{ params }: { params: Promise<{ workspaceId: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

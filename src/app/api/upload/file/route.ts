@@ -1,12 +1,11 @@
 import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 import { s3 } from "@/lib/s3";
-import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  // 1. Secure the upload route
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // 2. Reject video files
+    // Reject video files strictly
     if (
       file.type.startsWith("video/") ||
       /\.(mp4|mov|avi|webm|mkv|flv|wmv|m4v|3gp)$/i.test(file.name)
@@ -35,13 +34,11 @@ export async function POST(req: NextRequest) {
       process.env.AWS_BUCKET_NAME ||
       process.env.AWS_S3_BUCKET_NAME ||
       "infinite-canvas-demo";
+    const region = process.env.AWS_REGION || "ap-south-1";
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    
-    // 3. Save strictly in canvas-media folder
-    const fileName = `canvas-media/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const fileName = `profiles/${session.user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
-    // Upload to S3
     await s3.send(
       new PutObjectCommand({
         Bucket: bucketName,
@@ -51,22 +48,28 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // 4. Generate a Presigned GET URL valid for 7 days for the canvas to render it
-    const getCommand = new GetObjectCommand({
-      Bucket: bucketName,
-      Key: fileName,
-    });
-    
-    // 604800 = 7 days in seconds
-    const presignedUrl = await getSignedUrl(s3, getCommand, { expiresIn: 604800 });
+    const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`;
 
-    // 5. Return exactly what lib/upload-asset.ts expects ({ url: ... })
-    return NextResponse.json({ url: presignedUrl, key: fileName });
-  } catch (error: any) {
-    console.error("Canvas S3 Upload Error:", error);
-    return NextResponse.json(
-      { error: error?.message || "Upload failed" },
-      { status: 500 }
-    );
+    // 1. Create file record
+    const savedFile = await prisma.file.create({
+      data: {
+        url: publicUrl,
+        key: fileName,
+        mimeType: file.type || "application/octet-stream",
+        size: file.size || buffer.length,
+        uploadedById: session.user.id,
+      },
+    });
+
+    // 2. Link directly to logged-in user profile
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { image: fileName },
+    });
+
+    return NextResponse.json({ ...savedFile, key: fileName }, { status: 201 });
+  } catch (error) {
+    console.error("Upload File Error:", error);
+    return NextResponse.json({ error: "File upload failed" }, { status: 500 });
   }
 }

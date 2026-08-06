@@ -1,23 +1,16 @@
 import { useEffect, useState } from "react";
-import { useRoom } from "@liveblocks/react/suspense";
-import { JsonObject } from "@tldraw/utils";
+import { useRoom, useOthers, useUpdateMyPresence } from "@liveblocks/react/suspense";
+import { LiveMap } from "@liveblocks/client";
+import { customAssetStore } from "@/lib/upload-asset";
 import {
-  computed,
-  createPresenceStateDerivation,
   createTLStore,
-  createUserId,
-  react,
   defaultShapeUtils,
   DocumentRecordType,
-  InstancePresenceRecordType,
   PageRecordType,
-  CameraRecordType,
-  InstancePageStateRecordType,
-  PointerRecordType,
+  InstancePresenceRecordType,
   IndexKey,
   TLAnyShapeUtilConstructor,
   TLDocument,
-  TLInstancePresence,
   TLPageId,
   TLRecord,
   TLStoreEventInfo,
@@ -26,8 +19,53 @@ import {
   UserRecordType,
   TLINSTANCE_ID,
   TLPOINTER_ID,
-  TLInstance,
 } from "tldraw";
+
+// Helper function to sanitize records and satisfy Tldraw strict schema validation
+function sanitizeRecord(record: TLRecord): TLRecord {
+  if (record.typeName === "instance") {
+    // Remove obsolete properties that throw "Unexpected property" in newer tldraw versions
+    const {
+      isSnapMode,
+      isPenMode,
+      isHandMode,
+      isDarkMode,
+      isChatting,
+      highlightedUserIds,
+      ...cleanInstance
+    } = record as Record<string, unknown>;
+
+    return {
+      ...cleanInstance,
+      openMenus: Array.isArray(cleanInstance.openMenus) ? cleanInstance.openMenus : [],
+      chatMessage: typeof cleanInstance.chatMessage === "string" ? cleanInstance.chatMessage : "",
+      isFocusMode: typeof cleanInstance.isFocusMode === "boolean" ? cleanInstance.isFocusMode : false,
+      isGridMode: typeof cleanInstance.isGridMode === "boolean" ? cleanInstance.isGridMode : false,
+      isToolLocked: typeof cleanInstance.isToolLocked === "boolean" ? cleanInstance.isToolLocked : false,
+      isFocused: typeof cleanInstance.isFocused === "boolean" ? cleanInstance.isFocused : true,
+      isReadonly: typeof cleanInstance.isReadonly === "boolean" ? cleanInstance.isReadonly : false,
+      isCoarsePointer: typeof cleanInstance.isCoarsePointer === "boolean" ? cleanInstance.isCoarsePointer : false,
+      isHoveringCanvas: typeof cleanInstance.isHoveringCanvas === "boolean" ? cleanInstance.isHoveringCanvas : true,
+      devicePixelRatio: typeof cleanInstance.devicePixelRatio === "number" ? cleanInstance.devicePixelRatio : 1,
+      insets: Array.isArray(cleanInstance.insets) ? cleanInstance.insets : [],
+      zoomBrush: cleanInstance.zoomBrush !== undefined ? cleanInstance.zoomBrush : null,
+      scribbles: Array.isArray(cleanInstance.scribbles) ? cleanInstance.scribbles : [],
+    } as unknown as TLRecord;
+  }
+
+  if (record.typeName === "asset" && record.props && typeof record.props === "object") {
+    const props = record.props as Record<string, unknown>;
+    return {
+      ...record,
+      props: {
+        ...props,
+        src: record.type === "bookmark" ? undefined : (props.src || props.url || ""),
+      },
+    } as unknown as TLRecord;
+  }
+
+  return record;
+}
 
 export function useStorageStore({
   shapeUtils = [],
@@ -45,10 +83,13 @@ export function useStorageStore({
   isReadOnly: boolean;
 }>) {
   const room = useRoom();
+  const others = useOthers();
+  const updateMyPresence = useUpdateMyPresence();
 
   const [store] = useState(() => {
     return createTLStore({
       shapeUtils: [...defaultShapeUtils, ...shapeUtils],
+      assets: customAssetStore,
     });
   });
 
@@ -56,6 +97,101 @@ export function useStorageStore({
     status: "loading",
   });
 
+  // 1. Broadcast local pointer movement to Liveblocks Presence
+  useEffect(() => {
+    if (!store) return;
+
+    const unsub = store.listen((changes) => {
+      for (const record of Object.values(changes.changes.added)) {
+        if (record.typeName === "instance" && (record as any).cursor) {
+          const cursor = (record as any).cursor;
+          if (cursor && typeof cursor.x === "number" && typeof cursor.y === "number") {
+            updateMyPresence({ cursor: { x: cursor.x, y: cursor.y } });
+          }
+        }
+      }
+      for (const [, to] of Object.values(changes.changes.updated)) {
+        if (to.typeName === "instance" && (to as any).cursor) {
+          const cursor = (to as any).cursor;
+          if (cursor && typeof cursor.x === "number" && typeof cursor.y === "number") {
+            updateMyPresence({ cursor: { x: cursor.x, y: cursor.y } });
+          }
+        }
+      }
+    }, { scope: "session" });
+
+    return () => {
+      unsub();
+    };
+  }, [store, updateMyPresence]);
+
+  // 2. Sync remote cursors from Liveblocks others presence into tldraw store instance_presence
+  useEffect(() => {
+    if (!store) return;
+
+    const presenceRecords: TLRecord[] = [];
+    const activePresenceIds = new Set<string>();
+
+    for (const other of others) {
+      const presence = other.presence as {
+        cursor?: { x?: number; y?: number } | null;
+      };
+
+      // Strict validation for x and y numbers
+      if (
+        !presence ||
+        !presence.cursor ||
+        typeof presence.cursor.x !== "number" ||
+        typeof presence.cursor.y !== "number"
+      ) {
+        continue;
+      }
+
+      const presenceId = InstancePresenceRecordType.createId(`${other.connectionId}`);
+      activePresenceIds.add(presenceId);
+
+      const presenceRecord = InstancePresenceRecordType.create({
+        id: presenceId,
+        userId: (`user:${other.connectionId}`) as TLUser["id"],
+        userName: other.info?.name || "Guest",
+        color: other.info?.color || "#3b82f6",
+        currentPageId: "page:page" as TLPageId,
+        cursor: {
+          x: presence.cursor.x,
+          y: presence.cursor.y,
+          type: "default",
+          rotation: 0,
+        },
+        brush: null,
+        scribbles: [],
+        followingUserId: null,
+        chatMessage: "",
+        selectedShapeIds: [],
+        lastActivityTimestamp: Date.now(),
+      });
+
+      presenceRecords.push(presenceRecord as unknown as TLRecord);
+    }
+
+    if (presenceRecords.length > 0) {
+      store.put(presenceRecords);
+    }
+
+    // Remove disconnected users' presences
+    const existingPresences = store
+      .allRecords()
+      .filter((r) => r.typeName === "instance_presence" && r.id.startsWith("instance_presence:"));
+
+    const toRemove = existingPresences
+      .filter((r) => !activePresenceIds.has(r.id as string))
+      .map((r) => r.id);
+
+    if (toRemove.length > 0) {
+      store.remove(toRemove as any);
+    }
+  }, [store, others]);
+
+  // 3. Storage and record synchronization setup
   useEffect(() => {
     let isMounted = true;
     const unsubs: (() => void)[] = [];
@@ -64,17 +200,16 @@ export function useStorageStore({
       const { root } = await room.getStorage();
       if (!isMounted) return;
 
-      const liveRecords = root.get("records") as unknown as {
-        get(id: string): TLRecord | undefined;
-        set(id: string, value: TLRecord): void;
-        delete(id: string): void;
-        values(): IterableIterator<TLRecord>;
-      };
+      let liveRecords = root.get("records") as any;
+      if (!liveRecords) {
+        root.set("records", new LiveMap());
+        liveRecords = root.get("records") as any;
+      }
 
       const pageId = "page:page" as TLPageId;
       const recordsToPut: TLRecord[] = [];
+      const userId = "user:user" as TLUser["id"];
 
-      // 1. Ensure base document and page records exist
       if (!store.has("document:document" as TLDocument["id"])) {
         recordsToPut.push(
           DocumentRecordType.create({
@@ -93,270 +228,162 @@ export function useStorageStore({
         );
       }
 
-      // Populate Liveblocks Storage records safely with asset sanitization
-      const storedLiveRecords = Array.from(liveRecords.values()).map((record) => {
-        if (record.typeName === "asset" && record.props && typeof record.props === "object") {
-          return {
-            ...record,
-            props: {
-              ...record.props,
-              src: (record.props as any).src || "",
-            },
-          } as unknown as TLRecord;
-        }
-        return record;
-      });
+      const storedLiveRecords = Array.from(liveRecords.values())
+        .filter((record: any) => record && record.id !== TLINSTANCE_ID && record.id !== TLPOINTER_ID && record.id !== userId && record.typeName !== "instance_presence")
+        .map((record: any) => sanitizeRecord(record));
+
       recordsToPut.push(...storedLiveRecords);
+
+      if (store.has(TLINSTANCE_ID)) {
+        store.update(TLINSTANCE_ID, (record: any) => {
+          return sanitizeRecord({
+            ...record,
+            isReadonly: !!isReadOnly,
+          } as TLRecord) as any;
+        });
+      } else {
+        recordsToPut.push(
+          sanitizeRecord({
+            id: TLINSTANCE_ID,
+            typeName: "instance",
+            currentPageId: pageId,
+            followingUserId: null,
+            brush: null,
+            cursor: { type: "default", rotation: 0 },
+            scribbles: [],
+            opacityForNextShape: 1,
+            stylesForNextShape: {},
+            screenBounds: { x: 0, y: 0, w: 1080, h: 720 },
+            zoomLevel: 1,
+            isFocusMode: false,
+            isGridMode: false,
+            isToolLocked: false,
+            isFocused: true,
+            exportBackground: true,
+            isDebugMode: false,
+            isReadonly: !!isReadOnly,
+            openMenus: [],
+            screenCenter: { x: 540, y: 360 },
+            pageStates: {},
+            insets: [],
+            zoomBrush: null,
+            devicePixelRatio: 1,
+          } as unknown as TLRecord)
+        );
+      }
+
+      if (!store.has(TLPOINTER_ID)) {
+        recordsToPut.push({
+          id: TLPOINTER_ID,
+          typeName: "pointer",
+          target: "canvas",
+          pointerId: 1,
+          point: { x: 0, y: 0 },
+          lastPoint: { x: 0, y: 0 },
+          isDown: false,
+          isPen: false,
+          isEraser: false,
+        } as unknown as TLRecord);
+      }
+
+      if (!store.has(userId)) {
+        recordsToPut.push(
+          UserRecordType.create({
+            id: userId,
+            name: user?.name || "Anonymous",
+            color: user?.color || "#3b82f6",
+          })
+        );
+      }
+
       store.put(recordsToPut, "initialize");
 
-      // 2. Local Session / Instance Records 
-      if (!store.has(TLINSTANCE_ID)) {
-        recordsToPut.push({
-          id: TLINSTANCE_ID,
-          typeName: "instance",
-          currentPageId: pageId,
-          followingUserId: null,
-          highlightedUserIds: [],
-          brush: null,
-          cursor: { type: "default", rotation: 0 },
-          opacityForNextShape: 1,
-          stylesForNextShape: {},
-          screenBounds: { x: 0, y: 0, w: 1080, h: 720 },
-          insets: [false, false, false, false],
-          zoomBrush: null,
-          isGridMode: false,
-          isPenMode: false,
-          chatMessage: "",
-          isChatting: false,
-          isFocused: true,
-          devicePixelRatio: 1,
-          isIsolateMode: false,
-          duplicateProps: null,
-          // Nayi tldraw version ki missing properties:
-          isFocusMode: false,
-          isDebugMode: false,
-          isToolLocked: false,
-          exportBackground: false,
-          scribbles: [],
-          meta: {},
-        } as unknown as TLInstance); // <-- Double casting to bypass TS strict overlap error
-      }
+      const unsubscribeLocal = store.listen(
+        (changes: TLStoreEventInfo) => {
+          if (!isMounted) return;
+          if (changes.source === "remote") return;
 
-      // 3. Ensure Pointer, Camera, and InstancePageState exist
-      const pointerId = PointerRecordType.createId(TLPOINTER_ID);
-      if (!store.has(pointerId)) {
-        store.put([
-          PointerRecordType.create({
-            id: pointerId,
-            x: 0,
-            y: 0,
-            lastActivityTimestamp: Date.now(),
-          }),
-        ]);
-      }
-
-      if (!store.has(CameraRecordType.createId(pageId))) {
-        store.put([CameraRecordType.create({ id: CameraRecordType.createId(pageId) })]);
-      }
-
-      if (!store.has(InstancePageStateRecordType.createId(pageId))) {
-        store.put([
-          InstancePageStateRecordType.create({
-            id: InstancePageStateRecordType.createId(pageId),
-            pageId,
-          }),
-        ]);
-      }
-
-      if (!isMounted) return;
-
-      // 4. Sync local store user actions -> Liveblocks Storage
-      unsubs.push(
-        store.listen(
-          ({ changes }: TLStoreEventInfo) => {
-            room.batch(() => {
-              Object.values(changes.added).forEach((record) => {
-                try {
-                  liveRecords.set(record.id, record);
-                } catch {
-                  // Read-only user write prevention
-                }
-              });
-
-              Object.values(changes.updated).forEach(([, record]) => {
-                try {
-                  liveRecords.set(record.id, record);
-                } catch {
-                  // Read-only user write prevention
-                }
-              });
-
-              Object.values(changes.removed).forEach((record) => {
-                try {
-                  liveRecords.delete(record.id);
-                } catch {
-                  // Read-only user write prevention
-                }
-              });
-            });
-          },
-          { source: "user", scope: "document" } // Strictly user actions only to break loop
-        )
-      );
-
-      // 5. Sync presence changes
-      function syncStoreWithPresence({ changes }: TLStoreEventInfo) {
-        room.batch(() => {
-          Object.values(changes.added).forEach((record) => {
-            room.updatePresence({ [record.id]: record } as unknown as JsonObject);
-          });
-
-          Object.values(changes.updated).forEach(([, record]) => {
-            room.updatePresence({ [record.id]: record } as unknown as JsonObject);
-          });
-
-          Object.values(changes.removed).forEach((record) => {
-            room.updatePresence({ [record.id]: null } as unknown as JsonObject);
-          });
-        });
-      }
-
-      unsubs.push(
-        store.listen(syncStoreWithPresence, {
-          source: "user",
-          scope: "session",
-        })
-      );
-
-      unsubs.push(
-        store.listen(syncStoreWithPresence, {
-          source: "user",
-          scope: "presence",
-        })
-      );
-
-      // 6. Sync remote Liveblocks Storage -> Local tldraw store
-      unsubs.push(
-        room.subscribe(
-          liveRecords as never,
-          (storageChanges) => {
-            const toRemove: TLRecord["id"][] = [];
-            const toPut: TLRecord[] = [];
-
-            for (const update of storageChanges) {
-              if (update.type !== "LiveMap") return;
-
-              for (const [id, { type }] of Object.entries(update.updates)) {
-                switch (type) {
-                  case "delete": {
-                    toRemove.push(id as TLRecord["id"]);
-                    break;
-                  }
-                  case "update": {
-                    const curr = (update.node as unknown as { get(id: string): unknown }).get(id);
-                    if (curr) toPut.push(curr as TLRecord);
-                    break;
-                  }
-                }
-              }
+          room.batch(() => {
+            for (const record of Object.values(changes.changes.added)) {
+              if (record.id === TLINSTANCE_ID || record.id === TLPOINTER_ID || record.id === userId || record.typeName === "instance_presence") continue;
+              liveRecords.set(record.id, record);
             }
-
-            store.mergeRemoteChanges(() => {
-              if (toRemove.length) store.remove(toRemove);
-              if (toPut.length) store.put(toPut);
-            });
-          },
-          { isDeep: true }
-        )
-      );
-
-      // 7. User Preferences & Presence setup
-      const userPreferences = computed<TLUser | null>("userPreferences", () => {
-        if (!user) return null;
-        return UserRecordType.create({
-          id: createUserId(user.id),
-          name: user.name,
-          color: user.color,
-          imageUrl: "",
-          meta: {},
-        });
-      });
-
-      const connectionIdString = "" + (room.getSelf()?.connectionId || 0);
-
-      const presenceDerivation = createPresenceStateDerivation(
-        userPreferences,
-        { instanceId: InstancePresenceRecordType.createId(connectionIdString) }
-      )(store);
-
-      room.updatePresence({
-        presence: presenceDerivation.get() ?? null,
-      } as unknown as JsonObject);
-
-      unsubs.push(
-        react("when presence changes", () => {
-          const presence = presenceDerivation.get() ?? null;
-          requestAnimationFrame(() => {
-            room.updatePresence({ presence } as unknown as JsonObject);
+            for (const [, to] of Object.values(changes.changes.updated)) {
+              if (to.id === TLINSTANCE_ID || to.id === TLPOINTER_ID || to.id === userId || to.typeName === "instance_presence") continue;
+              liveRecords.set(to.id, to);
+            }
+            for (const record of Object.values(changes.changes.removed)) {
+              if (record.id === TLINSTANCE_ID || record.id === TLPOINTER_ID || record.id === userId || record.typeName === "instance_presence") continue;
+              liveRecords.delete(record.id);
+            }
           });
-        })
+        },
+        { scope: "document" }
       );
 
-      unsubs.push(
-        room.subscribe("others", (others, event) => {
-          const toRemove: TLInstancePresence["id"][] = [];
-          const toPut: TLInstancePresence[] = [];
+      unsubs.push(unsubscribeLocal);
 
-          switch (event.type) {
-            case "leave": {
-              if (event.user.connectionId) {
-                toRemove.push(
-                  InstancePresenceRecordType.createId(`${event.user.connectionId}`)
-                );
-              }
-              break;
-            }
-            case "reset": {
-              others.forEach((other) => {
-                toRemove.push(
-                  InstancePresenceRecordType.createId(`${other.connectionId}`)
-                );
-              });
-              break;
-            }
-            case "enter":
-            case "update": {
-              const presence = (event.user.presence as Record<string, unknown>)?.presence as TLInstancePresence | undefined;
-              if (presence) {
-                toPut.push(presence);
-              }
-            }
-          }
+      const unsubStorage = room.subscribe(
+        liveRecords,
+        () => {
+          if (!isMounted) return;
+
+          const currentRemoteRecords = Array.from(liveRecords.values()).filter(Boolean);
 
           store.mergeRemoteChanges(() => {
-            if (toRemove.length) store.remove(toRemove);
-            if (toPut.length) store.put(toPut);
+            const localRecordIds = new Set(store.allRecords().map((r) => r.id));
+            const remoteRecordIds = new Set(currentRemoteRecords.map((r: any) => r.id));
+
+            const toRemove: string[] = [];
+            for (const localId of localRecordIds) {
+              const r = store.get(localId as any);
+              if (localId === TLINSTANCE_ID || localId === TLPOINTER_ID || localId === userId || r?.typeName === "instance_presence") {
+                continue;
+              }
+              if (!remoteRecordIds.has(localId as any)) {
+                toRemove.push(localId);
+              }
+            }
+            if (toRemove.length > 0) {
+              store.remove(toRemove as any);
+            }
+
+            const filteredRemoteRecords = currentRemoteRecords
+              .filter((r: any) => r && r.id !== TLINSTANCE_ID && r.id !== TLPOINTER_ID && r.id !== userId && r.typeName !== "instance_presence")
+              .map((r: any) => sanitizeRecord(r));
+
+            store.put(filteredRemoteRecords);
           });
-        })
+        }
       );
+
+      unsubs.push(unsubStorage);
 
       if (isMounted) {
         setStoreWithStatus({
-          store,
           status: "synced-remote",
           connectionStatus: "online",
+          store,
         });
       }
     }
 
-    setup();
+    setup().catch((err) => {
+      console.error("[useStorageStore] Setup failed:", err);
+      if (isMounted) {
+        setStoreWithStatus({
+          status: "synced-remote",
+          connectionStatus: "online",
+          store,
+        });
+      }
+    });
 
     return () => {
       isMounted = false;
-      unsubs.forEach((fn) => fn());
-      unsubs.length = 0;
+      unsubs.forEach((unsub) => unsub());
     };
-  }, [room, store]); // Depend on room and store only
+  }, [room, store, user, isReadOnly]);
 
   return storeWithStatus;
 }
