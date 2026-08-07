@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { Skeleton } from "@/components/ui/skeleton";
 import { TLComponents, Tldraw, useEditor, type TLStoreSnapshot } from "tldraw";
 import "tldraw/tldraw.css";
 import { ActiveUsers } from "@/features/board/_components/ActiveUsers";
@@ -12,6 +11,7 @@ import { useBoardPersistence } from "@/features/board/hooks/use-board-persistenc
 import { useStorageStore } from "@/hooks/useStorageStore";
 import { Room } from "@/components/Room";
 import { VersionHistoryModal } from "@/features/board/_components/VersionHistoryModal";
+import { PresenceSync } from "@/features/board/_components/PresenceSync";
 
 interface BoardData {
   id: string;
@@ -52,7 +52,7 @@ function ReadOnlyControlled({ isReadOnly }: { isReadOnly: boolean }) {
   const editor = useEditor();
 
   useEffect(() => {
-    editor.setReadOnly(isReadOnly);
+    editor.updateInstanceState({ isReadonly: isReadOnly });
   }, [editor, isReadOnly]);
 
   return null;
@@ -117,14 +117,7 @@ function InnerBoard({
   );
 
   if (storeWithStatus.status === "loading") {
-    return (
-      <div className="flex h-full w-full items-center justify-center bg-zinc-950">
-        <div className="flex flex-col items-center gap-2">
-          <Skeleton className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent bg-zinc-900" />
-          <p className="text-sm text-zinc-400">Connecting to live board...</p>
-        </div>
-      </div>
-    );
+    return <div className="h-full w-full bg-zinc-950" />;
   }
 
   return (
@@ -137,6 +130,7 @@ function InnerBoard({
           initialSnapshot={initialSnapshot}
           isReadOnly={readOnly}
         />
+        <PresenceSync />
       </Tldraw>
     </div>
   );
@@ -185,17 +179,13 @@ export default function BoardPage() {
 
   // Loading state while verifying user membership & fetching board metadata
   if (isSessionPending || !board || !session) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-4 h-screen w-full bg-zinc-950">
-        <Skeleton className="h-64 w-full max-w-6xl rounded-2xl bg-zinc-900" />
-      </div>
-    );
+    return <div className="h-screen w-full bg-zinc-950" />;
   }
 
   const isOwner = board.createdById === session.user.id;
 
   return (
-    <div className="h-full w-full relative">
+    <div className="h-full w-full relative bg-zinc-950">
       <style>{`
         /* Offset top-left controls for app sidebar */
         .tlui-layout__top__left {
