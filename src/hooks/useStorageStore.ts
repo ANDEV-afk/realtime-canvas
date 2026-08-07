@@ -24,13 +24,19 @@ import {
 } from "tldraw";
 
 // Helper function to sanitize records and satisfy Tldraw strict schema validation
-// Helper function to sanitize records and satisfy Tldraw strict schema validation
 function sanitizeRecord(record: TLRecord): TLRecord {
   if (record.typeName === "instance") {
     const instance = record as unknown as Record<string, unknown>;
 
-    // Strip out legacy/invalid keys directly
-    const { isHandMode, isPenMode, isSnapMode, isChatting, ...rest } = instance;
+    // isHandMode, isSnapMode, isDarkMode: all three are unexpected/rejected
+    // by the current tldraw instance-record schema (they existed on older
+    // tldraw versions or got persisted from a differently-versioned client,
+    // and Liveblocks storage still has them on old records). Any of these
+    // being present — even re-added as a normalized boolean, which
+    // isSnapMode/isDarkMode were doing below — fails schema validation the
+    // moment store.put() runs, throwing "Unexpected property" and aborting
+    // hydration. All three must be stripped, not re-added.
+    const { isHandMode, isSnapMode, isDarkMode, ...rest } = instance;
 
     return {
       ...rest,
@@ -47,7 +53,8 @@ function sanitizeRecord(record: TLRecord): TLRecord {
       insets: Array.isArray(instance.insets) ? instance.insets : [],
       zoomBrush: instance.zoomBrush !== undefined ? instance.zoomBrush : null,
       scribbles: Array.isArray(instance.scribbles) ? instance.scribbles : [],
-      isDarkMode: typeof instance.isDarkMode === "boolean" ? instance.isDarkMode : false,
+      isPenMode: typeof instance.isPenMode === "boolean" ? instance.isPenMode : false,
+      isChatting: typeof instance.isChatting === "boolean" ? instance.isChatting : false,
       highlightedUserIds: Array.isArray(instance.highlightedUserIds) ? instance.highlightedUserIds : [],
     } as unknown as TLRecord;
   }

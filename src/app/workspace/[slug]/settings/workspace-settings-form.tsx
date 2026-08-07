@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,13 +31,17 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
   const { data: session } = useSession();
   const [name, setName] = useState(workspace.name);
   const [icon, setIcon] = useState(workspace.icon);
-  const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+  
+  // Instant local display if URL already exists
+  const initialIcon = workspace.icon || session?.user?.image || null;
+  const [displayUrl, setDisplayUrl] = useState<string | null>(initialIcon);
+  
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [imageError, setImageError] = useState(false);
 
   // Helper function to resolve presigned S3 view URL
-  const resolveImageUrl = async (rawIcon: string | null) => {
+  const resolveImageUrl = useCallback(async (rawIcon: string | null) => {
     if (!rawIcon) {
       setDisplayUrl(null);
       return;
@@ -48,9 +52,13 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
       return;
     }
 
-    // Extract S3 key from full URL or raw key
     let key = rawIcon;
     if (rawIcon.startsWith("http://") || rawIcon.startsWith("https://")) {
+      // Agar URL direct public CDN / S3 domain hai, instant set karke exit
+      if (!rawIcon.includes("amazonaws.com") && !rawIcon.includes("s3")) {
+        setDisplayUrl(rawIcon);
+        return;
+      }
       try {
         const urlObj = new URL(rawIcon);
         key = urlObj.pathname.startsWith("/")
@@ -61,6 +69,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
       }
     }
 
+    // Background fetch for presigned S3 key without flickering UI
     try {
       const res = await fetch(
         `/api/upload/presigned/get?key=${encodeURIComponent(key)}`
@@ -78,15 +87,20 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
     }
 
     setDisplayUrl(rawIcon);
-  };
+  }, []);
 
   useEffect(() => {
     setName(workspace.name);
-    const initialIcon = workspace.icon || session?.user?.image || null;
-    setIcon(initialIcon);
+    const currentIcon = workspace.icon || session?.user?.image || null;
+    setIcon(currentIcon);
     setImageError(false);
-    resolveImageUrl(initialIcon);
-  }, [workspace, session]);
+    
+    // Set immediate preview if available, then update with presigned URL in background
+    if (currentIcon) {
+      setDisplayUrl(currentIcon);
+      resolveImageUrl(currentIcon);
+    }
+  }, [workspace, session, resolveImageUrl]);
 
   const userName = session?.user?.name || workspace.name;
   const initials = userName
@@ -108,6 +122,10 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
       return;
     }
 
+    // Immediate preview for snappy UI
+    const localPreview = URL.createObjectURL(file);
+    setDisplayUrl(localPreview);
+
     setIsUploading(true);
     setImageError(false);
 
@@ -128,17 +146,14 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
       if (savedKeyOrUrl) {
         setIcon(savedKeyOrUrl);
 
-        // Fetch temporary presigned URL for display
         await resolveImageUrl(savedKeyOrUrl);
 
-        // Update workspace in database
         await fetch(`/api/workspaces/${workspace.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, icon: savedKeyOrUrl }),
         });
 
-        // Update user account image
         await authClient
           .updateUser({ image: savedKeyOrUrl })
           .catch((err) =>
@@ -159,7 +174,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
     }
   };
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name.trim()) return;
 
@@ -200,6 +215,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
                   alt={userName}
                   fill
                   unoptimized
+                  priority
                   className="h-full w-full object-cover"
                   onError={() => setImageError(true)}
                 />
