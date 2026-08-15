@@ -91,9 +91,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
     if (rawIcon.startsWith("http://") || rawIcon.startsWith("https://")) {
       try {
         const urlObj = new URL(rawIcon);
-        key = urlObj.pathname.startsWith("/")
-          ? urlObj.pathname.slice(1)
-          : urlObj.pathname;
+        key = urlObj.pathname.startsWith("/")? urlObj.pathname.slice(1) : urlObj.pathname;
       } catch {
         key = rawIcon;
       }

@@ -46,7 +46,7 @@ export function PlaceThreadButton({isPlacing,onStopPlacing}:PlaceThreadButtonPro
   return (
     <>
       {isPlacing === undefined && ( // coming from internal state(means show + button)
-        <div style={{position: "absolute", top: 12, right: 345, zIndex: 10000}}>
+        <div style={{position: "absolute", top: 12, right: 390, zIndex: 10000}}>
           <button
             onClick={() => setInternalState((prev) => (prev === "placing" ? "initial" : "placing"))}
             title="Add Comment"

@@ -20,34 +20,32 @@ export function Room({ roomId, children }: RoomProps) {
       authEndpoint={`/api/boards/${roomId}/access`}
       resolveUsers={async ({ userIds }) => {
         try {
-          // Send all user IDs to API
           const response = await fetch(`/api/users?ids=${userIds.join(",")}`);
           if (!response.ok) return [];
 
-          const users: Array<{ id: string; name: string; image?: string; avatar?: string;color?: string; }> =
+          const users: Array<{ id: string; name: string; avatar?: string; color?: string }> =
             await response.json();
 
-          // Liveblocks requires array to match exact 'userIds' order
-          return userIds.map((id) => {
-            const user = users.find((u) => u.id === id);
-
-            if (!user) {
-              // Fallback for Guests or Users not found in DB
-              return {
-                name: id.startsWith("guest_") ? "Guest User" : "Anonymous",
-                color: "#10b981",
-                avatar: "",
-              };
-            }
-
-            return {
-              name: user.name || "Anonymous",
-              avatar: user.image || user.avatar || "",
-              color: user.color || "#3b82f6",
-            };
-          });
+          return users.map((user) => ({
+            name: user.name || "Anonymous",
+            avatar: user.avatar || "",
+            color: user.color || "#3b82f6",
+          }));
         } catch (error) {
           console.error("Error resolving users in Liveblocks:", error);
+          return [];
+        }
+      }}
+      //Mentions (@) Autocomplete Suggestion Callback
+      resolveMentionSuggestions={async ({ text }) => {
+        try {
+          const response = await fetch(`/api/users/search?q=${encodeURIComponent(text)}`);
+          if (!response.ok) return [];
+
+          const userIds: string[] = await response.json();
+          return userIds; // Returns array of user IDs string for autocomplete
+        } catch (error) {
+          console.error("Error resolving mention suggestions:", error);
           return [];
         }
       }}

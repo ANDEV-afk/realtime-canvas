@@ -173,22 +173,26 @@ html.dark [data-lb-theme],
   --lb-elevation-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5) !important;
 }
 
-/* Direct Element Target Overrides (Fixes White Box & Pin Issue) */
+/* Direct Element Target Overrides (Fixes White Box & Notification Center) */
 .dark .lb-root,
 .dark .lb-thread,
 .dark .lb-comment,
 .dark .lb-composer,
 .dark .lb-portal,
 .dark .lb-elevation,
+.dark .lb-inbox-notification,
+.dark .lb-inbox-notification-list,
 [data-lb-theme="dark"] .lb-root,
 [data-lb-theme="dark"] .lb-thread,
 [data-lb-theme="dark"] .lb-comment,
 [data-lb-theme="dark"] .lb-composer,
 [data-lb-theme="dark"] .lb-portal,
-[data-lb-theme="dark"] .lb-elevation {
+[data-lb-theme="dark"] .lb-elevation,
+[data-lb-theme="dark"] .lb-inbox-notification,
+[data-lb-theme="dark"] .lb-inbox-notification-list {
   background-color: #18181b !important;
   color: #f4f4f5 !important;
-  border-color: #3f3f46 !important;
+  border-color: #27272a !important;
 }
 
 /* Pin Badges Overrides */
@@ -205,20 +209,48 @@ html.dark [data-lb-theme],
 .dark .lb-composer-editor,
 .dark .lb-comment-author,
 .dark .lb-comment-body,
+.dark .lb-inbox-notification-title,
+.dark .lb-inbox-notification-content,
 [data-lb-theme="dark"] .lb-comment-editor,
 [data-lb-theme="dark"] .lb-composer-editor,
 [data-lb-theme="dark"] .lb-comment-author,
-[data-lb-theme="dark"] .lb-comment-body {
+[data-lb-theme="dark"] .lb-comment-body,
+[data-lb-theme="dark"] .lb-inbox-notification-title,
+[data-lb-theme="dark"] .lb-inbox-notification-content {
   color: #f4f4f5 !important;
 }
 
 .dark .lb-button,
-[data-lb-theme="dark"] .lb-button {
+.dark .lb-inbox-notification-aside,
+[data-lb-theme="dark"] .lb-button,
+[data-lb-theme="dark"] .lb-inbox-notification-aside {
   color: #a1a1aa !important;
 }
 
 .dark .lb-button:hover,
-[data-lb-theme="dark"] .lb-button:hover {
+.dark .lb-inbox-notification:hover,
+[data-lb-theme="dark"] .lb-button:hover,
+[data-lb-theme="dark"] .lb-inbox-notification:hover {
   color: #f4f4f5 !important;
   background-color: #27272a !important;
+}
+
+/* Fix Icon Overlapping / Double Icon Bug in Popover & Share Zone */
+.tlui-share-zone button::before,
+.tlui-share-zone button::after,
+.tlui-share-zone button .lb-icon,
+button[title="Notifications"]::before,
+button[title="Notifications"]::after,
+button[title="Notifications"] .lb-icon {
+  background-image: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+  display: none !important;
+}
+
+/* Ensure Notifications inside popup render cleanly */
+.lb-inbox-notification-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }

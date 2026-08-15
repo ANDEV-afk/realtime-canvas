@@ -1,7 +1,7 @@
 "use client";
 
 import "@liveblocks/react-ui/styles.css";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { TLComponents, Tldraw, useEditor, type TLStoreSnapshot } from "tldraw";
@@ -14,6 +14,7 @@ import { Room } from "@/components/Room";
 import { VersionHistoryModal } from "@/features/board/_components/VersionHistoryModal";
 import { PresenceSync } from "@/features/board/_components/PresenceSync";
 import { CommentsCanvas } from "@/features/board/_components/CommentsCanvas";
+import { NotificationCenter } from "@/features/board/_components/NotificationCenter";
 
 interface BoardData {
   id: string;
@@ -106,9 +107,17 @@ function InnerBoard({
     () => ({
       SharePanel: () => (
         <div
-          className="tlui-share-zone flex shrink-0 items-center gap-3 relative z-[9999]"
+          className="tlui-share-zone flex shrink-0 items-center gap-3 relative z-9999"
           draggable={false}
         >
+          {/* 👈 2. Notification Center Added Here inside Suspense */}
+          <Suspense
+            fallback={
+              <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700/60 animate-pulse" />
+            }
+          >
+            <NotificationCenter />
+          </Suspense>
           <ActiveUsers />
           <VersionHistoryModal boardId={boardId} isOwner={isOwner} />
           <ShareModal boardId={boardId} initialAccessMode={accessMode} isOwner={isOwner} />
