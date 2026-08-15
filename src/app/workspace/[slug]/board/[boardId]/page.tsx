@@ -1,5 +1,6 @@
 "use client";
 
+import "@liveblocks/react-ui/styles.css";
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
@@ -12,6 +13,7 @@ import { useStorageStore } from "@/hooks/useStorageStore";
 import { Room } from "@/components/Room";
 import { VersionHistoryModal } from "@/features/board/_components/VersionHistoryModal";
 import { PresenceSync } from "@/features/board/_components/PresenceSync";
+import { CommentsCanvas } from "@/features/board/_components/CommentsCanvas";
 
 interface BoardData {
   id: string;
@@ -131,6 +133,9 @@ function InnerBoard({
           isReadOnly={readOnly}
         />
         <PresenceSync />
+
+        {/* 2. Comments Canvas Layer Rendered Here */}
+        <CommentsCanvas/>
       </Tldraw>
     </div>
   );

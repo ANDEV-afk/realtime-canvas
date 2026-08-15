@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* 1. Official Liveblocks Stylesheets */
+@import "@liveblocks/react-ui/styles.css";
+@import "@liveblocks/react-ui/styles/dark/media-query.css";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -129,4 +133,92 @@
   }
 }
 
-/* Dialog z-index is handled in component files (z-[9999]) */
+/* ==========================================================================
+   LIVEBLOCKS OVERRIDES & THEMING FIXES
+   ========================================================================== */
+
+/* 1. Emoji Picker, Attachments Menu & Popovers Z-Index Fix */
+.lb-portal,
+.lb-elevation,
+[data-radix-popper-content-wrapper] {
+  z-index: 999999 !important;
+}
+
+/* 2. Auto-Flip for Canvas Edges */
+.lb-composer[data-flip-vertical],
+.lb-thread[data-flip-vertical] {
+  transform: translateY(-100%);
+}
+
+.lb-composer[data-flip-horizontal],
+.lb-thread[data-flip-horizontal] {
+  transform: translateX(-100%);
+}
+
+/* 3. Comprehensive Dark Mode Variable Bridge */
+.dark [data-lb-theme],
+html.dark [data-lb-theme],
+[data-lb-theme="dark"] {
+  --lb-bg: #18181b !important;
+  --lb-surface: #27272a !important;
+  --lb-foreground: #f4f4f5 !important;
+  --lb-muted-foreground: #a1a1aa !important;
+  --lb-border: #3f3f46 !important;
+
+  --lb-color-bg: #18181b !important;
+  --lb-color-surface: #27272a !important;
+  --lb-color-foreground: #f4f4f5 !important;
+  --lb-color-muted-foreground: #a1a1aa !important;
+  --lb-color-border: #3f3f46 !important;
+  --lb-elevation-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5) !important;
+}
+
+/* Direct Element Target Overrides (Fixes White Box & Pin Issue) */
+.dark .lb-root,
+.dark .lb-thread,
+.dark .lb-comment,
+.dark .lb-composer,
+.dark .lb-portal,
+.dark .lb-elevation,
+[data-lb-theme="dark"] .lb-root,
+[data-lb-theme="dark"] .lb-thread,
+[data-lb-theme="dark"] .lb-comment,
+[data-lb-theme="dark"] .lb-composer,
+[data-lb-theme="dark"] .lb-portal,
+[data-lb-theme="dark"] .lb-elevation {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #3f3f46 !important;
+}
+
+/* Pin Badges Overrides */
+.dark .lb-comment-pin,
+.dark .lb-composer-pin,
+[data-lb-theme="dark"] .lb-comment-pin,
+[data-lb-theme="dark"] .lb-composer-pin {
+  background-color: #27272a !important;
+  color: #f4f4f5 !important;
+  border-color: #3f3f46 !important;
+}
+
+.dark .lb-comment-editor,
+.dark .lb-composer-editor,
+.dark .lb-comment-author,
+.dark .lb-comment-body,
+[data-lb-theme="dark"] .lb-comment-editor,
+[data-lb-theme="dark"] .lb-composer-editor,
+[data-lb-theme="dark"] .lb-comment-author,
+[data-lb-theme="dark"] .lb-comment-body {
+  color: #f4f4f5 !important;
+}
+
+.dark .lb-button,
+[data-lb-theme="dark"] .lb-button {
+  color: #a1a1aa !important;
+}
+
+.dark .lb-button:hover,
+[data-lb-theme="dark"] .lb-button:hover {
+  color: #f4f4f5 !important;
+  background-color: #27272a !important;
+}

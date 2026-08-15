@@ -16,13 +16,18 @@ declare global {
       id: string;
       info: {
         name: string;
-        color: string;
+        color?: string;
         avatar?: string;
       };
     };
 
     RoomEvent: Record<string, never>;
-    ThreadMetadata: Record<string, never>;
+    // 👈 Pin Coordinates aur Z-Index ke liye metadata type definition
+    ThreadMetadata: {
+      x: number;
+      y: number;
+      zIndex?: number;
+    };
   }
 }
 

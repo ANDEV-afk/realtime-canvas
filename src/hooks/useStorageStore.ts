@@ -28,14 +28,7 @@ function sanitizeRecord(record: TLRecord): TLRecord {
   if (record.typeName === "instance") {
     const instance = record as unknown as Record<string, unknown>;
 
-    // isHandMode, isSnapMode, isDarkMode: all three are unexpected/rejected
-    // by the current tldraw instance-record schema (they existed on older
-    // tldraw versions or got persisted from a differently-versioned client,
-    // and Liveblocks storage still has them on old records). Any of these
-    // being present — even re-added as a normalized boolean, which
-    // isSnapMode/isDarkMode were doing below — fails schema validation the
-    // moment store.put() runs, throwing "Unexpected property" and aborting
-    // hydration. All three must be stripped, not re-added.
+    // Strip legacy/unexpected properties
     const { isHandMode, isSnapMode, isDarkMode, ...rest } = instance;
 
     return {
@@ -61,18 +54,32 @@ function sanitizeRecord(record: TLRecord): TLRecord {
 
   if (record.typeName === "asset" && record.props && typeof record.props === "object") {
     const props = record.props as Record<string, unknown>;
+    const resolvedSrc = props.src || props.url || "";
+
+    // Fix: Bookmark assets ke props se 'url' strip karna zaruri hai 
+    // kyunki tldraw schema usko reject karta hai.
+    if (record.type === "bookmark") {
+      const { url, ...restProps } = props;
+      return {
+        ...record,
+        props: {
+          ...restProps,
+          src: resolvedSrc,
+        },
+      } as unknown as TLRecord;
+    }
+
     return {
       ...record,
       props: {
         ...props,
-        src: record.type === "bookmark" ? undefined : (props.src || props.url || ""),
+        src: resolvedSrc,
       },
     } as unknown as TLRecord;
   }
 
   return record;
 }
-
 // Records that must NEVER be pushed to / removed based on Liveblocks storage —
 // they are per-client session state only.
 const SESSION_ONLY_TYPENAMES = new Set([

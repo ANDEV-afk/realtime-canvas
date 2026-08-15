@@ -21,9 +21,24 @@ import { authClient, useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Upload, Camera, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { calculateFileHash } from "@/lib/crypto";
 
 interface WorkspaceSettingsFormProps {
   workspace: { id: string; name: string; slug: string; icon: string | null };
+}
+
+// FIX: ek icon value teen tarah ki ho sakti hai -
+//  1. data:/blob: (local preview) - directly usable
+//  2. http(s) URL jo S3 nahi hai (public/CDN) - directly usable
+//  3. raw S3 key (ya S3 URL) - NEEDS presigned URL fetch, kabhi bhi
+//     directly <Image src> mein mat daalo, warna broken/blank flash
+//     hota hai jab tak presigned fetch resolve na ho.
+function isDirectlyUsableUrl(url: string): boolean {
+  if (url.startsWith("data:") || url.startsWith("blob:")) return true;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return !url.includes("amazonaws.com") && !url.includes("s3");
+  }
+  return false;
 }
 
 export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps) {
@@ -31,11 +46,22 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
   const { data: session } = useSession();
   const [name, setName] = useState(workspace.name);
   const [icon, setIcon] = useState(workspace.icon);
-  
-  // Instant local display if URL already exists
+
   const initialIcon = workspace.icon || session?.user?.image || null;
-  const [displayUrl, setDisplayUrl] = useState<string | null>(initialIcon);
-  
+
+  // FIX: displayUrl sirf tab set hoti hai jab woh directly usable ho.
+  // Raw S3 key ko yahan kabhi mat daalo - blink isi se hota tha.
+  const [displayUrl, setDisplayUrl] = useState<string | null>(
+    initialIcon && isDirectlyUsableUrl(initialIcon) ? initialIcon : null
+  );
+
+  // FIX: naya loading state - jab tak presigned URL resolve nahi hota,
+  // spinner dikhao (blank box ya broken image ki jagah). Ye isUploading
+  // se alag hai - ye "existing icon load ho raha hai" ke liye hai.
+  const [isResolvingIcon, setIsResolvingIcon] = useState<boolean>(
+    !!initialIcon && !isDirectlyUsableUrl(initialIcon)
+  );
+
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -44,21 +70,25 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
   const resolveImageUrl = useCallback(async (rawIcon: string | null) => {
     if (!rawIcon) {
       setDisplayUrl(null);
+      setIsResolvingIcon(false);
       return;
     }
 
-    if (rawIcon.startsWith("data:") || rawIcon.startsWith("blob:")) {
+    // FIX: agar already directly usable hai (local preview / public URL),
+    // turant set karo - koi resolving zaroori nahi.
+    if (isDirectlyUsableUrl(rawIcon)) {
       setDisplayUrl(rawIcon);
+      setIsResolvingIcon(false);
       return;
     }
+
+    // Yahan se aage rawIcon ek S3 key/URL hai jo bina presign ke load
+    // nahi hogi - is dauraan displayUrl ko CHHEDO mat (raw key set mat
+    // karo), bas resolving flag on rakho taaki UI spinner dikhaye.
+    setIsResolvingIcon(true);
 
     let key = rawIcon;
     if (rawIcon.startsWith("http://") || rawIcon.startsWith("https://")) {
-      // Agar URL direct public CDN / S3 domain hai, instant set karke exit
-      if (!rawIcon.includes("amazonaws.com") && !rawIcon.includes("s3")) {
-        setDisplayUrl(rawIcon);
-        return;
-      }
       try {
         const urlObj = new URL(rawIcon);
         key = urlObj.pathname.startsWith("/")
@@ -69,7 +99,6 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
       }
     }
 
-    // Background fetch for presigned S3 key without flickering UI
     try {
       const res = await fetch(
         `/api/upload/presigned/get?key=${encodeURIComponent(key)}`
@@ -79,6 +108,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
         if (data.url) {
           setDisplayUrl(data.url);
           setImageError(false);
+          setIsResolvingIcon(false);
           return;
         }
       }
@@ -86,7 +116,10 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
       console.error("Error resolving presigned image URL:", err);
     }
 
-    setDisplayUrl(rawIcon);
+    // FIX: fallback mein raw (unusable) key ko src mat banao - null
+    // rakho taaki initials fallback saaf se dikhe, broken image nahi.
+    setDisplayUrl(null);
+    setIsResolvingIcon(false);
   }, []);
 
   useEffect(() => {
@@ -94,10 +127,21 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
     const currentIcon = workspace.icon || session?.user?.image || null;
     setIcon(currentIcon);
     setImageError(false);
-    
-    // Set immediate preview if available, then update with presigned URL in background
-    if (currentIcon) {
+
+    if (!currentIcon) {
+      setDisplayUrl(null);
+      setIsResolvingIcon(false);
+      return;
+    }
+
+    // FIX: sirf directly-usable URLs turant set karo. S3 keys ke liye
+    // resolveImageUrl ko hi displayUrl set karne do (spinner dikhega
+    // is dauraan, blink nahi).
+    if (isDirectlyUsableUrl(currentIcon)) {
       setDisplayUrl(currentIcon);
+      setIsResolvingIcon(false);
+    } else {
+      setIsResolvingIcon(true);
       resolveImageUrl(currentIcon);
     }
   }, [workspace, session, resolveImageUrl]);
@@ -122,16 +166,20 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
       return;
     }
 
-    // Immediate preview for snappy UI
+    // Immediate preview for snappy UI (blob: URL is directly usable, safe)
     const localPreview = URL.createObjectURL(file);
     setDisplayUrl(localPreview);
+    setIsResolvingIcon(false);
 
     setIsUploading(true);
     setImageError(false);
 
     try {
+      // 🎯 Step 1: Client side SHA-256 Hash generate karo
+      const fileHash = await calculateFileHash(file);
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("fileHash", fileHash);//Step 2: Hash backend API route ko bhej do
 
       const res = await fetch("/api/upload/file", {
         method: "POST",
@@ -160,8 +208,9 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
             console.warn("Failed to update user account image:", err)
           );
 
-        toast.success(
-          "Profile photo updated successfully across your account and workspace"
+        toast.success(data.isDuplicate
+            ? "Reused existing image"
+            : "Profile photo updated successfully across your account and workspace"
         );
         window.dispatchEvent(new Event("workspaces-changed"));
         router.refresh();
@@ -174,7 +223,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name.trim()) return;
 
@@ -207,7 +256,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
           <Label className="text-sm font-medium">Workspace Profile Photo</Label>
           <div className="flex items-center gap-6">
             <div className="h-32 w-32 rounded-2xl overflow-hidden bg-zinc-900 border-2 border-border/60 shadow-lg flex items-center justify-center relative group">
-              {isUploading ? (
+              {isUploading || isResolvingIcon ? (
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               ) : displayUrl && !imageError ? (
                 <Image
@@ -251,9 +300,8 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
                 {isUploading ? "Uploading..." : "Upload profile photo"}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Square image, PNG or JPG up to 100MB. Stored securely in S3 (
-                <code className="text-blue-400">profiles/</code>). Updates your
-                account profile across the project. Videos are not allowed.
+                Square image, PNG or JPG up to 100MB. Stored securely.Updates your
+                account profile across the project.
               </p>
             </div>
           </div>

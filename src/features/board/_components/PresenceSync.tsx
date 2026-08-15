@@ -45,11 +45,7 @@ export function PresenceSync() {
 
   // --- Selection (this DOES go through the normal store/reactive signals,
   // so useValue works fine here) ---
-  const selectedShapeIds = useValue(
-    "selectedShapeIds",
-    () => editor.getSelectedShapeIds(),
-    [editor]
-  );
+  const selectedShapeIds = useValue("selectedShapeIds",() => editor.getSelectedShapeIds(),[editor]);
 
   useEffect(() => {
     updateMyPresence({ selection: selectedShapeIds });

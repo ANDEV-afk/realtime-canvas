@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -30,11 +29,11 @@ model User {
 }
 
 model Workspace {
-  id         String   @id @default(uuid())
+  id         String  @id @default(uuid())
   name       String
-  slug       String   @unique
+  slug       String  @unique
   icon       String?
-  inviteCode String   @unique @default(uuid()) // <--- ADD THIS
+  inviteCode String  @unique @default(uuid()) // <--- ADD THIS
 
   ownerId String
   owner   User   @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -79,7 +78,7 @@ model Board {
   thumbnail      String?
   snapshot       Json
   workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  accessMode  String   @default("editor") // "editor" ya "viewer" — "Anyone with the link" permission
+  accessMode     String    @default("editor") // "editor" ya "viewer" — "Anyone with the link" permission
   updatedAt      DateTime  @updatedAt
   createdAt      DateTime  @default(now())
   createdById    String
@@ -88,7 +87,7 @@ model Board {
   createdBy      User            @relation("BoardCreator", fields: [createdById], references: [id], onDelete: NoAction)
   lastEditedBy   User            @relation("BoardEditor", fields: [lastEditedById], references: [id], onDelete: NoAction)
   boardSnapshots BoardSnapshot[]
-  comments       Comment[]
+  commentThreads CommentThread[]
 
   @@index([workspaceId])
   @@index([createdById])
@@ -102,9 +101,9 @@ model BoardSnapshot {
 
   snapshot Json // create time edge case "required"
 
-  version   Int
+  version     Int
   createdById String
-  createdBy   User @relation(fields: [createdById], references: [id], onDelete: NoAction)
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: NoAction)
 
   createdAt DateTime @default(now())
 
@@ -113,25 +112,39 @@ model BoardSnapshot {
   @@index([createdById])
 }
 
-model Comment {
+model CommentThread {
   id String @id @default(uuid())
 
   boardId String
   board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Pin location on Canvas
+  x Float
+  y Float
 
-  shapeId String
-
-  content String
-
-  resolved Boolean @default(false)
-
+  resolved  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  comments Comment[]
+
   @@index([boardId])
+}
+
+model Comment {
+  id String @id @default(uuid())
+
+  threadId String
+  thread   CommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([threadId])
   @@index([userId])
 }
 
@@ -166,6 +179,8 @@ model File {
   url String
 
   key String
+  
+  fileHash  String?   @unique // 👈 Deduplication Key
 
   mimeType String
 

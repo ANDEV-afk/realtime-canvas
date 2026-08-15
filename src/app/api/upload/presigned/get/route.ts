@@ -22,8 +22,7 @@ export async function GET(req: NextRequest) {
     const key = decodeURIComponent(rawKey);
     const bucketName =
       process.env.AWS_BUCKET_NAME ||
-      process.env.AWS_S3_BUCKET_NAME ||
-      "infinite-canvas-demo";
+      process.env.AWS_S3_BUCKET_NAME 
 
     const command = new GetObjectCommand({
       Bucket: bucketName,
