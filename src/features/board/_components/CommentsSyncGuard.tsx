@@ -37,7 +37,7 @@ export function CommentsSyncGuard() {
 
     switch (context.type) {
       case "DELETE_COMMENT_ERROR": {
-        const key = `comment:${context.threadId}:${context.commentId}`;
+      const key = `comment:${context.threadId}:${context.commentId}`;
         if (retriedKeys.current.has(key)) return; // already retried once
         retriedKeys.current.add(key);
 

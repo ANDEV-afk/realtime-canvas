@@ -1,41 +1,36 @@
 "use client";
 
 import { useThreads } from "@liveblocks/react";
-import { useEffect, useState } from "react";
-import { useEditor } from "tldraw";
+import { useState } from "react";
+import { useEditor, useValue } from "tldraw";
 import { PlaceThreadButton } from "./PlaceThreadButton";
 import { ThreadPin } from "./ThreadPin";
 import { CommentsSyncGuard } from "./CommentsSyncGuard";
 import { CheckCircle2, Eye } from "lucide-react";
 
-// On canvas zoom, thread position can be same but on screen it's pixel position can be changed, So React does not know automatically to recalculate ThreadPin, so forcefully telling react to re-render to pin the position as canvas change. 
+// FIX: pehle hum `editor.store.listen()` (bina scope ke, HAR store change
+// pe fire hota - shapes/selection/pointer/camera sab) + manual "wheel"
+// event listener use kar rahe the sirf re-render trigger karne ke liye.
+// Ye dono tldraw ke apne internal render loop (jo requestAnimationFrame
+// pe chalta hai) se OUT OF SYNC hote the - React ka re-render tldraw ke
+// camera transform paint hone se ek frame aage/peeche fire ho sakta tha,
+// jo fast pan/zoom mein pins ko "hilta"/lagging dikhata tha.
+//
+// `useValue` tldraw ka apna reactive signal hook hai - ye seedha unke
+// internal rAF-batched render scheduling se tied hai, isliye camera
+// change hone par re-render EXACTLY tabhi hota hai jab naya camera
+// transform actually paint ho chuka ho. Ye jitter poori tarah khatam
+// kar deta hai, aur code bhi chhota ho jaata hai (no manual listeners).
 export function CommentsCanvas({ isCommentMode }: { isCommentMode?: boolean }) {
   const editor = useEditor();
   const { threads } = useThreads();
-  const [, setTick] = useState(0); // forcing to re-render
-  
+
+  // Camera (pan/zoom) badalte hi ye component automatically re-render
+  // hoga - tldraw ke apne render cycle ke saath perfectly synced.
+  useValue("camera", () => editor?.getCamera(), [editor]);
+
   // 👈 State for toggling resolved comments visiblity
   const [showResolved, setShowResolved] = useState(false);
-
-  // Jab canvas zoom/pan ho, pins ki onscreen coordinates refresh hongi
-  useEffect(() => {
-    if (!editor) return;
-    const cleanup = editor.store.listen(() => {
-      setTick((prev) => prev + 1);
-    });
-
-    const handleWheel = () => {
-      setTick((prev) => prev + 1);
-    };
-
-    const container = editor.getContainer();
-    container.addEventListener("wheel", handleWheel, { passive: true });
-
-    return () => {
-      cleanup();
-      container.removeEventListener("wheel", handleWheel);
-    };
-  }, [editor]);
 
   // Filter threads based on resolve state
   const visibleThreads = (threads ?? []).filter((thread) => showResolved || !thread.resolved);
@@ -58,7 +53,7 @@ export function CommentsCanvas({ isCommentMode }: { isCommentMode?: boolean }) {
 
       {/* Visual Control: Resolved Comments Toggle Button */}
       {resolvedCount > 0 && (
-        <div style={{ position: "fixed", top: 12, right: 395, zIndex: 10000, pointerEvents: "auto" }}>
+        <div style={{ position: "fixed", top: 12, right: 446, zIndex: 10000, pointerEvents: "auto" }}>
           <button
             onClick={() => setShowResolved((prev) => !prev)}
             title={showResolved ? "Hide Resolved Comments" : "Show Resolved Comments"}

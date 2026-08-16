@@ -1,8 +1,8 @@
 "use client";
 
-import {useInboxNotifications,useUnreadInboxNotificationsCount} from "@liveblocks/react/suspense";
-import {InboxNotification,InboxNotificationList} from "@liveblocks/react-ui";
-import { Bell } from "lucide-react";
+import { useInboxNotifications, useUnreadInboxNotificationsCount } from "@liveblocks/react/suspense";
+import { InboxNotification, InboxNotificationList } from "@liveblocks/react-ui";
+import { Bell, BellOff, CheckCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 import {
   Popover,
@@ -19,15 +19,17 @@ export function NotificationCenter() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-700/60 text-zinc-300 hover:text-white hover:bg-zinc-800 transition isolate shrink-0 select-none"
+          className="relative flex items-center justify-center h-10 w-10 rounded-lg text transition-colors cursor-pointer outline-none group border-none bg-transparent shadow-none shrink-0"
           title="Notifications"
         >
-          {/* Bell Icon Wrapper to block Liveblocks CSS injection */}
-          <span className="flex items-center justify-center pointer-events-none">
-            <Bell className="w-4 h-4 stroke-2" />
+          {/* Bell Icon matched with Comment Icon scale */}
+          <span className="flex items-center justify-center pointer-events-none transition-transform group-hover:scale-105">
+            <Bell className="w-6 h-6 stroke-2 mt-1.5" />
           </span>
+
+          {/* Clean Glowing Unread Badge */}
           {count > 0 && (
-            <span className="absolute -top-1 -right-1 z-10 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow-md pointer-events-none">
+            <span className="absolute top-1.5 right-1.5 z-20 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white shadow-[0_0_8px_rgba(37,99,235,0.6)] animate-pulse pointer-events-none">
               {count > 9 ? "9+" : count}
             </span>
           )}
@@ -36,17 +38,40 @@ export function NotificationCenter() {
 
       <PopoverContent
         align="end"
-        className="w-95 p-0 bg-zinc-900 border-zinc-800 shadow-xl"
+        sideOffset={8}
+        className="w-80 p-0 z-999999 bg-zinc-900/95 backdrop-blur-md border border-zinc-800/80 shadow-2xl rounded-xl text-zinc-100 overflow-hidden"
       >
-        <div className="p-3 border-b border-zinc-800 flex items-center justify-between">
-          <h4 className="text-xs font-semibold text-zinc-200">Notifications</h4>
-          <span className="text-[10px] text-zinc-500">{count} unread</span>
+        {/* Header Bar */}
+        <div className="px-3.5 py-2.5 border-b border-zinc-800/80 bg-zinc-950/40 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            <h4 className="text-xs font-semibold tracking-wide text-zinc-200">Notifications</h4>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {count > 0 ? (
+              <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-medium">
+                {count} new
+              </span>
+            ) : (
+              <span className="text-[10px] text-zinc-500 font-medium flex items-center gap-1">
+                <CheckCheck className="w-3 h-3 text-zinc-500" /> Caught up
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="max-h-90 overflow-y-auto">
+        {/* List Content Area */}
+        <div className="max-h-80 overflow-y-auto divide-y divide-zinc-800/50">
           {inboxNotifications.length === 0 ? (
-            <div className="p-6 text-center text-xs text-zinc-500">
-              No notifications yet
+            <div className="py-10 px-4 flex flex-col items-center justify-center text-center">
+              <div className="w-10 h-10 rounded-full bg-zinc-800/60 border border-zinc-700/40 flex items-center justify-center mb-2.5 text-zinc-500">
+                <BellOff className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-medium text-zinc-300">No notifications yet</p>
+              <p className="text-[11px] text-zinc-500 mt-0.5">
+                Mentions and thread replies will appear here
+              </p>
             </div>
           ) : (
             <InboxNotificationList>

@@ -23,8 +23,8 @@ export function Room({ roomId, children }: RoomProps) {
           const response = await fetch(`/api/users?ids=${userIds.join(",")}`);
           if (!response.ok) return [];
 
-          const users: Array<{ id: string; name: string; avatar?: string; color?: string }> =
-            await response.json();
+          const users: Array<{ id: string; name: string; avatar?: string; color?: string }> 
+          = await response.json();
 
           return users.map((user) => ({
             name: user.name || "Anonymous",

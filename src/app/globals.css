@@ -248,9 +248,23 @@ button[title="Notifications"] .lb-icon {
   display: none !important;
 }
 
-/* Ensure Notifications inside popup render cleanly */
-.lb-inbox-notification-icon {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+/* Liveblocks Notification Items Refinement */
+.lb-inbox-notification {
+  padding: 10px 14px !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid rgba(39, 39, 42, 0.4) !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.lb-inbox-notification:hover {
+  background-color: rgba(39, 39, 42, 0.6) !important;
+}
+
+.lb-inbox-notification-unread {
+  background-color: rgba(37, 99, 235, 0.05) !important;
+}
+
+.lb-avatar {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
 }
