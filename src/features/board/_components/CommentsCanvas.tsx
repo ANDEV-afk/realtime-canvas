@@ -53,7 +53,7 @@ export function CommentsCanvas({ isCommentMode }: { isCommentMode?: boolean }) {
 
       {/* Visual Control: Resolved Comments Toggle Button */}
       {resolvedCount > 0 && (
-        <div style={{ position: "fixed", top: 12, right: 395, zIndex: 10000, pointerEvents: "auto" }}>
+        <div style={{ position: "fixed", top: 12, right: 446, zIndex: 10000, pointerEvents: "auto" }}>
           <button
             onClick={() => setShowResolved((prev) => !prev)}
             title={showResolved ? "Hide Resolved Comments" : "Show Resolved Comments"}

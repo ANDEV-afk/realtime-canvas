@@ -257,6 +257,11 @@ button[title="Notifications"] .lb-icon {
 }
 
 .lb-inbox-notification:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.dark .lb-inbox-notification:hover,
+[data-lb-theme="dark"] .lb-inbox-notification:hover {
   background-color: rgba(39, 39, 42, 0.6) !important;
 }
 
