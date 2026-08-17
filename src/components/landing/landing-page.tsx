@@ -249,11 +249,8 @@ export function LandingPage() {
         </div>
       </motion.header>
 
-      {/* Sidelines container with crosshairs */}
-      <div className="relative mx-auto max-w-[1200px] px-6 lg:px-8 border-x border-black/10 dark:border-white/10">
-        <div className="absolute -left-2 top-0 text-xs text-black/40 dark:text-white/40 pointer-events-none">+</div>
-        <div className="absolute -right-2 top-0 text-xs text-black/40 dark:text-white/40 pointer-events-none">+</div>
-
+      {/* Main container */}
+      <div className="relative mx-auto max-w-[1200px] px-6 lg:px-8">
         <main className="pt-28">
           {/* Hero */}
           <section
@@ -270,29 +267,29 @@ export function LandingPage() {
                 initial={{ opacity: 0, y: 32 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                className="mx-auto w-full rounded-2xl bg-white p-10 text-center shadow-[rgba(0,0,0,0.1)_0px_24px_70px_0px] dark:border dark:border-white/10 dark:bg-[#18181b] sm:p-14"
+                className="relative mx-auto flex flex-col items-center justify-center w-full text-center py-14 px-6 sm:px-16 rounded-3xl bg-white/40 dark:bg-[#09090b]/40 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.12)] border-0"
               >
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="mb-4 font-mono text-xs tracking-[0.05em] text-[#595959] dark:text-zinc-400"
+                  className="mb-4 font-mono text-xs font-semibold tracking-[0.05em] text-[#4d49fc] dark:text-[#00b6ff]"
                 >
                   infinite canvas · real-time · free to start
                 </motion.p>
 
-                <h1 className="text-[clamp(2.5rem,5.5vw,4rem)] font-light leading-[1.1] tracking-[-0.84px] text-black dark:text-white">
+                <h1 className="text-[clamp(2.25rem,4.5vw,3.25rem)] font-light leading-[1.1] tracking-[-0.84px] text-black dark:text-white">
                   Draw anything.
                   <br />
                   Together.
                 </h1>
 
-                <p className="mx-auto mt-6 max-w-md text-lg leading-[1.4] tracking-[-0.18px] text-[#595959] dark:text-zinc-400">
+                <p className="mx-auto mt-6 max-w-md text-base sm:text-lg font-normal leading-[1.4] tracking-[-0.01em] text-zinc-700 dark:text-zinc-300">
                   CoolBoard is the collaborative whiteboard for teams who think visually —
                   sketch, brainstorm, and ship on one infinite canvas.
                 </p>
 
-                <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
                   <PrimaryButton href="/signup">Start drawing free</PrimaryButton>
                   <GhostButton href="/login">See a demo</GhostButton>
                 </div>
