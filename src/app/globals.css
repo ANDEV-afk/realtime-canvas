@@ -294,14 +294,14 @@ button[title="Notifications"] .lb-icon {
   box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
 }
 
-/* Hide default cursor everywhere */
-body,
-body *,
-input,
-textarea,
-button,
-select,
-[role="button"] {
+/* Hide default cursor when cursor-none is applied */
+.cursor-none,
+.cursor-none *,
+.cursor-none input,
+.cursor-none textarea,
+.cursor-none button,
+.cursor-none select,
+.cursor-none [role="button"] {
   cursor: none !important;
 }
 
