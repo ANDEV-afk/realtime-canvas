@@ -1,13 +1,6 @@
 import Link from "next/link";
-import { MagicCard } from "@/components/ui/magic-card";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { motion } from "motion/react";
+import { CustomCursor } from "@/components/landing/custom-cursor";
 
 export function GoogleIcon() {
   return (
@@ -32,6 +25,21 @@ export function GoogleIcon() {
   );
 }
 
+function LogoMark() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 2L19 21L12 17L5 21L12 2Z"
+        fill="#4d49fc"
+        stroke="#ffffff"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="10" r="1.5" fill="#ffffff" />
+    </svg>
+  );
+}
+
 type AuthShellProps = {
   title: string;
   description: string;
@@ -39,42 +47,85 @@ type AuthShellProps = {
   footer: React.ReactNode;
 };
 
+const DIAGONAL_CARDS_1 = [
+  { title: "Design Sprint 🚀", bg: "#4d49fc", text: "white" },
+  { title: "User Flow Map", bg: "#24cb71", text: "black" },
+  { title: "Wireframe UI", bg: "#ff7237", text: "white" },
+  { title: "Architecture", bg: "#00b6ff", text: "black" },
+];
+
+const DIAGONAL_CARDS_2 = [
+  { title: "Component Token", bg: "#e4ff97", text: "black" },
+  { title: "Checkout UX", bg: "#c4baff", text: "black" },
+  { title: "Kanban Backlog", bg: "#c7f8fb", text: "black" },
+  { title: "Microservices", bg: "#ffc9c1", text: "black" },
+];
+
 export function AuthShell({ title, description, children, footer }: AuthShellProps) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_oklch(0.93_0.02_280)_0%,_transparent_55%),radial-gradient(circle_at_bottom_right,_oklch(0.95_0.03_30)_0%,_transparent_50%)]"
-      />
-      <div className="relative w-full max-w-md">
-        <div className="mb-8 text-center">
-          <Link
-            href="/"
-            className="text-foreground inline-flex items-center gap-2 text-lg font-semibold tracking-tight"
-          >
-            <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-xl text-sm font-bold">
-              L
-            </span>
-            Let See
+    <div
+      className="relative flex h-screen w-screen cursor-none items-center justify-center overflow-hidden bg-[#09090b] px-4 py-4 text-white selection:bg-[#4d49fc]/20"
+      style={{ fontFamily: "var(--font-figmasans)" }}
+    >
+      <CustomCursor />
+
+      {/* Full-width background animation flowing seamlessly across left, center, and right behind the form */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-hidden">
+        <div className="absolute -top-40 -left-40 size-[700px] rounded-full bg-gradient-to-tr from-[#4d49fc]/50 via-[#00b6ff]/30 to-transparent blur-[130px]" />
+        <div className="absolute -bottom-40 -right-40 size-[750px] rounded-full bg-gradient-to-bl from-[#ff7237]/45 via-[#24cb71]/35 to-transparent blur-[150px]" />
+
+        {/* 4-column continuous full-width background card stream covering center behind form with hardware acceleration */}
+        <div className="absolute inset-0 z-0 rotate-[-15deg] scale-150 opacity-35 grid grid-cols-4 gap-6 pointer-events-none px-6">
+          {[DIAGONAL_CARDS_1, DIAGONAL_CARDS_2, DIAGONAL_CARDS_1, DIAGONAL_CARDS_2].map((colCards, colIdx) => (
+            <motion.div
+              key={colIdx}
+              animate={{ y: colIdx % 2 === 0 ? ["0%", "-50%"] : ["-50%", "0%"] }}
+              transition={{ duration: 25 + colIdx * 5, repeat: Infinity, ease: "linear" }}
+              style={{ willChange: "transform" }}
+              className="flex flex-col gap-6 w-full"
+            >
+              {[...colCards, ...colCards].map((card, i) => (
+                <div
+                  key={i}
+                  className="h-36 rounded-2xl p-4 shadow-2xl flex flex-col justify-between border border-white/20 backdrop-blur-md"
+                  style={{ background: card.bg, color: card.text }}
+                >
+                  <div className="font-mono text-[10px] opacity-80">node_0{i + 1}</div>
+                  <div className="text-base font-bold tracking-tight">{card.title}</div>
+                  <div className="h-1.5 w-12 rounded-full bg-current opacity-30" />
+                </div>
+              ))}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 w-full max-w-[400px]"
+      >
+        <div className="mb-4 flex justify-center">
+          <Link href="/" data-cursor-hover className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+            <LogoMark />
+            <span className="text-base font-medium tracking-tight text-white">CoolBoard</span>
           </Link>
         </div>
 
-        <Card className="w-full border-none p-0 shadow-none">
-          <MagicCard
-            className="rounded-4xl p-0"
-            gradientColor="oklch(0.75 0.08 280 / 0.35)"
-          >
-            <CardHeader className="border-border border-b p-6 [.border-b]:pb-6">
-              <CardTitle className="text-center text-xl font-semibold">{title}</CardTitle>
-              <CardDescription className="text-center">{description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5 p-6">{children}</CardContent>
-            <CardFooter className="border-border justify-center border-t p-6 text-sm [.border-t]:pt-6">
-              {footer}
-            </CardFooter>
-          </MagicCard>
-        </Card>
-      </div>
+        <div className="rounded-2xl border border-white/15 bg-[#18181b]/80 p-6 backdrop-blur-2xl shadow-[0_24px_70px_rgba(0,0,0,0.8)] sm:p-8">
+          <div className="mb-5 text-center">
+            <h1 className="text-xl font-light tracking-[-0.24px] text-white">{title}</h1>
+            <p className="mt-1 text-sm text-zinc-300">{description}</p>
+          </div>
+
+          <div className="space-y-4">{children}</div>
+
+          <div className="mt-6 border-t border-white/10 pt-4 text-center text-sm text-zinc-300">
+            {footer}
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

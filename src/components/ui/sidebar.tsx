@@ -257,7 +257,7 @@ function Sidebar({
         >
           {children}
         </div>
-        {collapsible !== "none" && <SidebarRail />}
+        <SidebarRail />
       </div>
     </div>
   )
