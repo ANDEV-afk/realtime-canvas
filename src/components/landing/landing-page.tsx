@@ -169,7 +169,7 @@ export function LandingPage() {
     <div
       className={`landing-page min-h-screen overflow-x-hidden cursor-none transition-colors duration-300 ${
         darkMode ? "dark bg-[#09090b] text-white" : "bg-white text-black"
-      } selection:bg-[#4d49fc]/20`}
+      } selection:bg-electric-indigo/20`}
       style={{ fontFamily: "var(--font-figmasans)" }}
     >
       <CustomCursor />
@@ -182,7 +182,7 @@ export function LandingPage() {
             animate={{ y: "0%" }}
             exit={{ y: "-100%" }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[99999] bg-[#4d49fc] pointer-events-none"
+            className="fixed inset-0 z-99999 bg-electric-indigo pointer-events-none"
           />
         )}
       </AnimatePresence>
@@ -258,7 +258,7 @@ export function LandingPage() {
           {/* Hero */}
           <section
             ref={heroRef}
-            className="relative flex min-h-[85vh] items-center justify-center overflow-hidden pb-28 pt-16"
+            className="relative flex min-h-[90vh] items-center justify-center overflow-hidden py-36 lg:py-44"
           >
             <HeroCollage />
 
@@ -360,13 +360,13 @@ export function LandingPage() {
                   transition={{ delay: i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                   whileHover={{ y: -6 }}
                   data-cursor-hover
-                  className="group rounded-2xl border border-black/[0.06] bg-white p-8 transition-shadow duration-300 hover:shadow-[rgba(0,0,0,0.06)_0px_16px_50px_0px] dark:border-white/10 dark:bg-[#18181b]"
+                  className="group rounded-2xl border border-black/6 bg-white p-8 transition-shadow duration-300 hover:shadow-[rgba(0,0,0,0.06)_0px_16px_50px_0px] dark:border-white/10 dark:bg-[#18181b]"
                 >
                   <span className="text-3xl">{feature.icon}</span>
                   <h3 className="mt-5 text-xl font-medium leading-[1.35] tracking-[-0.24px]">
                     {feature.title}
                   </h3>
-                  <p className="mt-3 text-base leading-[1.45] tracking-[-0.11px] text-[#595959] dark:text-zinc-400">
+                  <p className="mt-3 text-base leading-[1.45] tracking-[-0.11px] text-graphite dark:text-zinc-400">
                     {feature.body}
                   </p>
                 </motion.div>
