@@ -33,8 +33,7 @@ export async function POST(req: NextRequest) {
 
     const bucketName =
       process.env.AWS_BUCKET_NAME ||
-      process.env.AWS_S3_BUCKET_NAME ||
-      "infinite-canvas-demo";
+      process.env.AWS_S3_BUCKET_NAME
 
     const buffer = Buffer.from(await file.arrayBuffer());
     

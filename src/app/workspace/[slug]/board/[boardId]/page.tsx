@@ -2,10 +2,12 @@
 
 import "@liveblocks/react-ui/styles.css";
 import { useEffect, useState, useMemo, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { TLComponents, Tldraw, useEditor, type TLStoreSnapshot } from "tldraw";
 import "tldraw/tldraw.css";
+import { motion, AnimatePresence } from "motion/react";
 import { ActiveUsers } from "@/features/board/_components/ActiveUsers";
 import { ShareModal } from "@/components/ShareModal";
 import { useBoardPersistence } from "@/features/board/hooks/use-board-persistence";
@@ -83,6 +85,82 @@ function BoardPersistence({
   return null;
 }
 
+function TopLeftThemeToggle() {
+  const editor = useEditor();
+  const [wipeTheme, setWipeTheme] = useState(false);
+  const [isDark, setIsDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setIsDark(editor.user.getIsDarkMode());
+    const dispose = editor.store.listen(() => {
+      setIsDark(editor.user.getIsDarkMode());
+    });
+    return () => dispose();
+  }, [editor]);
+
+  const handleThemeToggle = () => {
+    setWipeTheme(true);
+    setTimeout(() => {
+      const currentDark = editor.user.getIsDarkMode();
+      const nextDark = !currentDark;
+      editor.user.updateUserPreferences({ colorScheme: nextDark ? "dark" : "light" });
+      setIsDark(nextDark);
+      if (nextDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }, 350);
+
+    setTimeout(() => {
+      setWipeTheme(false);
+    }, 700);
+  };
+
+  return (
+    <>
+      {mounted &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {wipeTheme && (
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: "0%" }}
+                exit={{ y: "-100%" }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                className="fixed inset-0 z-[99999999] bg-[#4d49fc] pointer-events-none"
+              />
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+
+      {/* Button placed right after the three dots icon in top-left toolbar */}
+      <div className="absolute top-2 left-86 z-9999 flex items-center">
+        <button
+          onClick={handleThemeToggle}
+          className="flex size-8 items-center justify-center rounded-lg border border-black/10 bg-white/90 text-amber-500 shadow-sm transition-colors hover:bg-black/5 dark:border-zinc-700/60 dark:bg-zinc-900/90 dark:text-amber-400 dark:hover:bg-zinc-800 cursor-pointer"
+          title="Toggle theme"
+        >
+          {isDark ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-amber-400">
+              <circle cx="12" cy="12" r="5" fill="currentColor" />
+              <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-zinc-700">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </>
+  );
+}
+
 // Real-time Collaborative Canvas Inner Component
 function InnerBoard({
   boardId,
@@ -110,7 +188,6 @@ function InnerBoard({
           className="tlui-share-zone flex shrink-0 items-center gap-3 relative z-9999"
           draggable={false}
         >
-          {/* 👈 2. Notification Center Added Here inside Suspense */}
           <Suspense
             fallback={
               <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700/60 animate-pulse" />
@@ -135,6 +212,7 @@ function InnerBoard({
     <div className="absolute inset-0 h-full w-full">
       <Tldraw store={storeWithStatus} components={tldrawComponents} autoFocus>
         <ThemeSyncPlugin />
+        <TopLeftThemeToggle />
         <ReadOnlyControlled isReadOnly={readOnly} />
         <BoardPersistence
           boardId={boardId}
