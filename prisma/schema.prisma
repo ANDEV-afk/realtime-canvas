@@ -42,7 +42,6 @@ model Workspace {
   updatedAt   DateTime          @updatedAt
   members     WorkspaceMember[]
   boards      Board[]
-  invitations Invitation[]
 
   @@index([ownerId])
   @@index([inviteCode]) // <--- ADD THIS FOR FAST LOOKUPS
@@ -148,30 +147,6 @@ model Comment {
   @@index([userId])
 }
 
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  EXPIRED
-}
-
-model Invitation {
-  id String @id @default(uuid())
-
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  email String
-
-  role WorkspaceRole
-
-  status InvitationStatus @default(PENDING)
-
-  expiresAt DateTime
-
-  createdAt DateTime @default(now())
-
-  @@unique([workspaceId, email])
-}
 
 model File {
   id String @id @default(uuid())
