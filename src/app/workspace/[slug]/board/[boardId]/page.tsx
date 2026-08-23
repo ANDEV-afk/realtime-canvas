@@ -210,7 +210,10 @@ function InnerBoard({
 
   return (
     <div className="absolute inset-0 h-full w-full">
-      <Tldraw store={storeWithStatus} components={tldrawComponents} autoFocus>
+      <Tldraw 
+      store={storeWithStatus} 
+      components={tldrawComponents} autoFocus
+      licenseKey={process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY}>
         <ThemeSyncPlugin />
         <TopLeftThemeToggle />
         <ReadOnlyControlled isReadOnly={readOnly} />
