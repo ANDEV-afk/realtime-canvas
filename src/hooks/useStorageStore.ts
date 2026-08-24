@@ -21,12 +21,13 @@ import {
   TLPOINTER_ID,
 } from "tldraw";
 
-// Helper function to sanitize records and satisfy Tldraw strict schema validation
-function sanitizeRecord(record: TLRecord): TLRecord {
+function sanitizeRecord(record: TLRecord): TLRecord | null {
+  if (!record || typeof record !== "object" || !record.id || !record.typeName) {
+    return null;
+  }
+
   if (record.typeName === "instance") {
     const instance = record as unknown as Record<string, unknown>;
-
-    // Strip legacy/unexpected properties
     const { isHandMode, isSnapMode, isDarkMode, ...rest } = instance;
 
     return {
@@ -85,10 +86,7 @@ const SESSION_ONLY_TYPENAMES = new Set([
   "instance_presence",
 ]);
 
-// Legacy or unsupported record types that must be stripped from Liveblocks hydration
-const LEGACY_INVALID_TYPENAMES = new Set([
-  "user",
-]);
+const LEGACY_INVALID_TYPENAMES = new Set(["user"]);
 
 export function useStorageStore({
   shapeUtils = [],
@@ -210,6 +208,7 @@ export function useStorageStore({
           room.batch(() => {
             for (const record of Object.values(changes.changes.added)) {
               if (
+                record &&
                 !SESSION_ONLY_TYPENAMES.has(record.typeName) &&
                 !LEGACY_INVALID_TYPENAMES.has(record.typeName)
               ) {
@@ -218,6 +217,7 @@ export function useStorageStore({
             }
             for (const [, to] of Object.values(changes.changes.updated)) {
               if (
+                to &&
                 !SESSION_ONLY_TYPENAMES.has(to.typeName) &&
                 !LEGACY_INVALID_TYPENAMES.has(to.typeName)
               ) {
@@ -225,7 +225,7 @@ export function useStorageStore({
               }
             }
             for (const record of Object.values(changes.changes.removed)) {
-              if (!SESSION_ONLY_TYPENAMES.has(record.typeName)) {
+              if (record && !SESSION_ONLY_TYPENAMES.has(record.typeName)) {
                 liveRecords.delete(record.id);
               }
             }
@@ -245,11 +245,12 @@ export function useStorageStore({
               r.typeName &&
               !LEGACY_INVALID_TYPENAMES.has(r.typeName)
           )
-          .map((r: any) => sanitizeRecord(r));
+          .map((r: any) => sanitizeRecord(r))
+          .filter((r): r is TLRecord => r !== null);
 
         isApplyingRemote = true;
         store.mergeRemoteChanges(() => {
-          const remoteIds = new Set(currentRemoteRecords.map((r: any) => r.id));
+          const remoteIds = new Set(currentRemoteRecords.map((r) => r.id));
 
           const toRemove = store
             .allRecords()
@@ -329,38 +330,42 @@ export function useStorageStore({
               record.id !== userId &&
               record.typeName !== "instance_presence"
           )
-          .map((record: any) => sanitizeRecord(record));
+          .map((record: any) => sanitizeRecord(record))
+          .filter((r): r is TLRecord => r !== null);
+
         toApplyLocally.push(...storedLiveRecords);
 
         if (!store.has(TLINSTANCE_ID)) {
-          toApplyLocally.push(
-            sanitizeRecord({
-              id: TLINSTANCE_ID,
-              typeName: "instance",
-              currentPageId: pageId,
-              followingUserId: null,
-              brush: null,
-              cursor: { type: "default", rotation: 0 },
-              scribbles: [],
-              opacityForNextShape: 1,
-              stylesForNextShape: {},
-              screenBounds: { x: 0, y: 0, w: 1080, h: 720 },
-              zoomLevel: 1,
-              isFocusMode: false,
-              isGridMode: false,
-              isToolLocked: false,
-              isFocused: true,
-              exportBackground: true,
-              isDebugMode: false,
-              isReadonly: !!isReadOnly,
-              openMenus: [],
-              screenCenter: { x: 540, y: 360 },
-              pageStates: {},
-              insets: [],
-              zoomBrush: null,
-              devicePixelRatio: 1,
-            } as unknown as TLRecord)
-          );
+          const sanitizedInstance = sanitizeRecord({
+            id: TLINSTANCE_ID,
+            typeName: "instance",
+            currentPageId: pageId,
+            followingUserId: null,
+            brush: null,
+            cursor: { type: "default", rotation: 0 },
+            scribbles: [],
+            opacityForNextShape: 1,
+            stylesForNextShape: {},
+            screenBounds: { x: 0, y: 0, w: 1080, h: 720 },
+            zoomLevel: 1,
+            isFocusMode: false,
+            isGridMode: false,
+            isToolLocked: false,
+            isFocused: true,
+            exportBackground: true,
+            isDebugMode: false,
+            isReadonly: !!isReadOnly,
+            openMenus: [],
+            screenCenter: { x: 540, y: 360 },
+            pageStates: {},
+            insets: [],
+            zoomBrush: null,
+            devicePixelRatio: 1,
+          } as unknown as TLRecord);
+
+          if (sanitizedInstance) {
+            toApplyLocally.push(sanitizedInstance);
+          }
         }
 
         if (!store.has(TLPOINTER_ID)) {
