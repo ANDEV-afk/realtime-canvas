@@ -18,7 +18,6 @@ import {
   TLStoreEventInfo,
   TLStoreWithStatus,
   TLUser,
-  UserRecordType,
   TLINSTANCE_ID,
   TLPOINTER_ID,
 } from "tldraw";
@@ -80,6 +79,7 @@ function sanitizeRecord(record: TLRecord): TLRecord {
 
   return record;
 }
+
 // Records that must NEVER be pushed to / removed based on Liveblocks storage —
 // they are per-client session state only.
 const SESSION_ONLY_TYPENAMES = new Set([
@@ -89,8 +89,6 @@ const SESSION_ONLY_TYPENAMES = new Set([
   "instance_page_state",
   "instance_presence",
 ]);
-
-// Replace the entire hook body with this optimized & stabilized version:
 
 export function useStorageStore({
   shapeUtils = [],
@@ -363,16 +361,6 @@ export function useStorageStore({
             lastActivityTimestamp: Date.now(),
             meta: {},
           } as unknown as TLRecord);
-        }
-
-        if (!store.has(userId)) {
-          toApplyLocally.push(
-            UserRecordType.create({
-              id: userId,
-              name: user?.name || "Anonymous",
-              color: user?.color || "#3b82f6",
-            })
-          );
         }
 
         isApplyingRemote = true;
