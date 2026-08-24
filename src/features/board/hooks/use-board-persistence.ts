@@ -12,6 +12,19 @@ interface UseBoardPersistenceOptions {
   isReadOnly?: boolean;
 }
 
+const sanitizeRecord = (record: any) => {
+  if (!record || typeof record !== "object") return record;
+  if (record.typeName === "shape" && record.props && typeof record.props === "object") {
+    const props = { ...record.props };
+    if (props.richText && typeof props.richText === "object") {
+      const { attrs, ...validRichText } = props.richText;
+      props.richText = validRichText;
+    }
+    return { ...record, props };
+  }
+  return record;
+};
+
 // Modern Tldraw schema-compliant normalizer
 const normalizeSnapshot = (
   snap: Record<string, unknown> | TLStoreSnapshot | unknown,

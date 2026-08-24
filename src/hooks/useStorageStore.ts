@@ -26,6 +26,22 @@ function sanitizeRecord(record: TLRecord): TLRecord | null {
     return null;
   }
 
+  // 1. Sanitize shapes (geo, text, arrow, etc.) having unexpected richText attributes
+  if (record.typeName === "shape" && record.props && typeof record.props === "object") {
+    const props = { ...(record.props as Record<string, unknown>) };
+
+    // Strip/clean invalid richText props that break Tldraw schema
+    if (props.richText && typeof props.richText === "object") {
+      const { attrs, ...validRichText } = props.richText as Record<string, unknown>;
+      props.richText = validRichText;
+    }
+
+    return {
+      ...record,
+      props,
+    } as unknown as TLRecord;
+  }
+
   if (record.typeName === "instance") {
     const instance = record as unknown as Record<string, unknown>;
     const { isHandMode, isSnapMode, isDarkMode, ...rest } = instance;
