@@ -85,6 +85,11 @@ const SESSION_ONLY_TYPENAMES = new Set([
   "instance_presence",
 ]);
 
+// Legacy or unsupported record types that must be stripped from Liveblocks hydration
+const LEGACY_INVALID_TYPENAMES = new Set([
+  "user",
+]);
+
 export function useStorageStore({
   shapeUtils = [],
   user,
@@ -204,12 +209,18 @@ export function useStorageStore({
 
           room.batch(() => {
             for (const record of Object.values(changes.changes.added)) {
-              if (!SESSION_ONLY_TYPENAMES.has(record.typeName)) {
+              if (
+                !SESSION_ONLY_TYPENAMES.has(record.typeName) &&
+                !LEGACY_INVALID_TYPENAMES.has(record.typeName)
+              ) {
                 liveRecords.set(record.id, record);
               }
             }
             for (const [, to] of Object.values(changes.changes.updated)) {
-              if (!SESSION_ONLY_TYPENAMES.has(to.typeName)) {
+              if (
+                !SESSION_ONLY_TYPENAMES.has(to.typeName) &&
+                !LEGACY_INVALID_TYPENAMES.has(to.typeName)
+              ) {
                 liveRecords.set(to.id, to);
               }
             }
@@ -228,7 +239,12 @@ export function useStorageStore({
         if (!isMounted) return;
 
         const currentRemoteRecords = Array.from(liveRecords.values())
-          .filter(Boolean)
+          .filter(
+            (r: any) =>
+              r &&
+              r.typeName &&
+              !LEGACY_INVALID_TYPENAMES.has(r.typeName)
+          )
           .map((r: any) => sanitizeRecord(r));
 
         isApplyingRemote = true;
@@ -306,6 +322,8 @@ export function useStorageStore({
           .filter(
             (record: any) =>
               record &&
+              record.typeName &&
+              !LEGACY_INVALID_TYPENAMES.has(record.typeName) &&
               record.id !== TLINSTANCE_ID &&
               record.id !== TLPOINTER_ID &&
               record.id !== userId &&
