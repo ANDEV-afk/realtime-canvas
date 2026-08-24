@@ -17,7 +17,6 @@ import {
   TLRecord,
   TLStoreEventInfo,
   TLStoreWithStatus,
-  TLUser,
   TLINSTANCE_ID,
   TLPOINTER_ID,
 } from "tldraw";
@@ -55,8 +54,6 @@ function sanitizeRecord(record: TLRecord): TLRecord {
     const props = record.props as Record<string, unknown>;
     const resolvedSrc = props.src || props.url || "";
 
-    // Fix: Bookmark assets ke props se 'url' strip karna zaruri hai 
-    // kyunki tldraw schema usko reject karta hai.
     if (record.type === "bookmark") {
       const { url, ...restProps } = props;
       return {
@@ -80,8 +77,6 @@ function sanitizeRecord(record: TLRecord): TLRecord {
   return record;
 }
 
-// Records that must NEVER be pushed to / removed based on Liveblocks storage —
-// they are per-client session state only.
 const SESSION_ONLY_TYPENAMES = new Set([
   "instance",
   "pointer",
@@ -145,7 +140,7 @@ export function useStorageStore({
 
       const presenceRecord = InstancePresenceRecordType.create({
         id: presenceId,
-        userId: (`user:${other.connectionId}`) as TLUser["id"],
+        userId: (`user:${other.connectionId}`) as any,
         userName: other.info?.name || "Guest",
         color: other.info?.color || "#3b82f6",
         currentPageId: "page:page" as TLPageId,
@@ -185,15 +180,15 @@ export function useStorageStore({
     });
   }, [store, others]);
 
-  // 2. Document sync (Fixed Infinite Loop & Freeze Bug)
+  // 2. Document sync
   useEffect(() => {
     let isMounted = true;
-    let isApplyingRemote = false; // Flag to stop recursive store sync loops
+    let isApplyingRemote = false;
     let recordUnsubs: (() => void)[] = [];
     let rootUnsub: (() => void) | null = null;
 
     const pageId = "page:page" as TLPageId;
-    const userId = "user:user" as TLUser["id"];
+    const userId = "user:user";
 
     function teardownRecordSync() {
       recordUnsubs.forEach((u) => u());
@@ -203,10 +198,9 @@ export function useStorageStore({
     function attachRecordSync(liveRecords: any) {
       teardownRecordSync();
 
-      // Local edits -> Liveblocks storage
       const unsubscribeLocal = store.listen(
         (changes: TLStoreEventInfo) => {
-          if (!isMounted || isApplyingRemote) return; // Prevent echo loop!
+          if (!isMounted || isApplyingRemote) return;
 
           room.batch(() => {
             for (const record of Object.values(changes.changes.added)) {
@@ -230,7 +224,6 @@ export function useStorageStore({
       );
       recordUnsubs.push(unsubscribeLocal);
 
-      // Storage -> Local store
       const unsubStorage = room.subscribe(liveRecords, () => {
         if (!isMounted) return;
 
@@ -238,7 +231,7 @@ export function useStorageStore({
           .filter(Boolean)
           .map((r: any) => sanitizeRecord(r));
 
-        isApplyingRemote = true; // Lock sync
+        isApplyingRemote = true;
         store.mergeRemoteChanges(() => {
           const remoteIds = new Set(currentRemoteRecords.map((r: any) => r.id));
 
@@ -260,7 +253,7 @@ export function useStorageStore({
             store.put(currentRemoteRecords);
           }
         });
-        isApplyingRemote = false; // Unlock sync
+        isApplyingRemote = false;
       });
       recordUnsubs.push(unsubStorage);
     }
