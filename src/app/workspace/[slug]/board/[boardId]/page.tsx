@@ -18,8 +18,6 @@ import { PresenceSync } from "@/features/board/_components/PresenceSync";
 import { CommentsCanvas } from "@/features/board/_components/CommentsCanvas";
 import { NotificationCenter } from "@/features/board/_components/NotificationCenter";
 
-// Move License Key outside component tree so reference remains completely static across renders
-const TLDRAW_LICENSE_KEY = process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY || undefined;
 
 interface BoardData {
   id: string;
@@ -215,8 +213,7 @@ function InnerBoard({
     <div className="absolute inset-0 h-full w-full">
       <Tldraw 
       store={storeWithStatus} 
-      components={tldrawComponents} autoFocus
-      licenseKey={TLDRAW_LICENSE_KEY}>
+      components={tldrawComponents} autoFocus>
         <ThemeSyncPlugin />
         <TopLeftThemeToggle />
         <ReadOnlyControlled isReadOnly={readOnly} />

@@ -90,6 +90,8 @@ const SESSION_ONLY_TYPENAMES = new Set([
   "instance_presence",
 ]);
 
+// Replace the entire hook body with this optimized & stabilized version:
+
 export function useStorageStore({
   shapeUtils = [],
   user,
@@ -119,9 +121,7 @@ export function useStorageStore({
     status: "loading",
   });
 
-  // 1. Sync remote cursors from Liveblocks `others` presence into tldraw's
-  // instance_presence records. (This part was already working correctly —
-  // untouched.)
+  // 1. Remote cursors sync
   useEffect(() => {
     if (!store) return;
 
@@ -187,9 +187,10 @@ export function useStorageStore({
     });
   }, [store, others]);
 
-  // 2. Document (shapes/page) sync — race-safe.
+  // 2. Document sync (Fixed Infinite Loop & Freeze Bug)
   useEffect(() => {
     let isMounted = true;
+    let isApplyingRemote = false; // Flag to stop recursive store sync loops
     let recordUnsubs: (() => void)[] = [];
     let rootUnsub: (() => void) | null = null;
 
@@ -201,29 +202,29 @@ export function useStorageStore({
       recordUnsubs = [];
     }
 
-    // Wires local<->remote sync for a specific `liveRecords` LiveMap.
-    // Called again whenever the canonical "records" LiveMap reference
-    // changes (see rootUnsub below) so we never stay stuck on a stale map.
     function attachRecordSync(liveRecords: any) {
       teardownRecordSync();
 
-      // Local edits -> Liveblocks storage. `source: "user"` means this
-      // never fires for our own mergeRemoteChanges-wrapped hydration or
-      // for remote-applied changes — no manual source check needed, and
-      // no self-echo risk.
+      // Local edits -> Liveblocks storage
       const unsubscribeLocal = store.listen(
         (changes: TLStoreEventInfo) => {
-          if (!isMounted) return;
+          if (!isMounted || isApplyingRemote) return; // Prevent echo loop!
 
           room.batch(() => {
             for (const record of Object.values(changes.changes.added)) {
-              liveRecords.set(record.id, record);
+              if (!SESSION_ONLY_TYPENAMES.has(record.typeName)) {
+                liveRecords.set(record.id, record);
+              }
             }
             for (const [, to] of Object.values(changes.changes.updated)) {
-              liveRecords.set(to.id, to);
+              if (!SESSION_ONLY_TYPENAMES.has(to.typeName)) {
+                liveRecords.set(to.id, to);
+              }
             }
             for (const record of Object.values(changes.changes.removed)) {
-              liveRecords.delete(record.id);
+              if (!SESSION_ONLY_TYPENAMES.has(record.typeName)) {
+                liveRecords.delete(record.id);
+              }
             }
           });
         },
@@ -231,7 +232,7 @@ export function useStorageStore({
       );
       recordUnsubs.push(unsubscribeLocal);
 
-      // Liveblocks storage -> local store.
+      // Storage -> Local store
       const unsubStorage = room.subscribe(liveRecords, () => {
         if (!isMounted) return;
 
@@ -239,6 +240,7 @@ export function useStorageStore({
           .filter(Boolean)
           .map((r: any) => sanitizeRecord(r));
 
+        isApplyingRemote = true; // Lock sync
         store.mergeRemoteChanges(() => {
           const remoteIds = new Set(currentRemoteRecords.map((r: any) => r.id));
 
@@ -260,17 +262,11 @@ export function useStorageStore({
             store.put(currentRemoteRecords);
           }
         });
+        isApplyingRemote = false; // Unlock sync
       });
       recordUnsubs.push(unsubStorage);
     }
 
-    // Creates local-only session records (instance/pointer/user/camera/
-    // page-state) if missing, and pulls existing document records from
-    // `liveRecords` into the local store. Only records that are genuinely
-    // NEW (didn't exist in liveRecords yet — i.e. a brand new board) get
-    // persisted back to Liveblocks; already-stored records are only ever
-    // applied locally, never re-written (this was the "echo on every
-    // mount" bug).
     function hydrate(liveRecords: any) {
       try {
         const toApplyLocally: TLRecord[] = [];
@@ -327,12 +323,7 @@ export function useStorageStore({
           .map((record: any) => sanitizeRecord(record));
         toApplyLocally.push(...storedLiveRecords);
 
-        if (store.has(TLINSTANCE_ID)) {
-          const existing = store.get(TLINSTANCE_ID) as any;
-          toApplyLocally.push(
-            sanitizeRecord({ ...existing, isReadonly: !!isReadOnly } as TLRecord)
-          );
-        } else {
+        if (!store.has(TLINSTANCE_ID)) {
           toApplyLocally.push(
             sanitizeRecord({
               id: TLINSTANCE_ID,
@@ -384,16 +375,12 @@ export function useStorageStore({
           );
         }
 
-        // Applied as a REMOTE merge — this must not be picked up by our
-        // own `source: "user"` listener, or already-stored records would
-        // get needlessly re-broadcast every mount (and could clobber a
-        // fresher remote write with a stale snapshot).
+        isApplyingRemote = true;
         store.mergeRemoteChanges(() => {
           store.put(toApplyLocally, "initialize");
         });
+        isApplyingRemote = false;
 
-        // Only genuinely-new document/page records get written back —
-        // once, explicitly.
         if (toPersistRemotely.length > 0) {
           room.batch(() => {
             for (const record of toPersistRemotely) {
@@ -402,10 +389,7 @@ export function useStorageStore({
           });
         }
       } catch (hydrationErr) {
-        console.error(
-          "[useStorageStore] Hydration failed — check which record failed schema validation:",
-          hydrationErr
-        );
+        console.error("[useStorageStore] Hydration error:", hydrationErr);
       }
     }
 
@@ -424,12 +408,6 @@ export function useStorageStore({
 
       let liveRecords = getOrCreateRecordsMap();
 
-      // Guard against the create-race: if two clients open a brand-new
-      // board at the same time, both may create their own "records"
-      // LiveMap. Liveblocks resolves this to a single winner — but a
-      // client holding the losing map would otherwise stay stuck writing
-      // to / listening on a dead object forever. Subscribing to `root`
-      // lets us detect the swap and re-point sync at the real map.
       rootUnsub = room.subscribe(root, () => {
         const current = root.get("records") as any;
         if (current && current !== liveRecords) {
@@ -452,7 +430,7 @@ export function useStorageStore({
     }
 
     setup().catch((err) => {
-      console.error("[useStorageStore] Setup failed:", err);
+      console.error("[useStorageStore] Setup error:", err);
       if (isMounted) {
         setStoreWithStatus({
           status: "synced-remote",
@@ -467,10 +445,6 @@ export function useStorageStore({
       teardownRecordSync();
       if (rootUnsub) rootUnsub();
     };
-    // Depend on primitive `user` fields, not the object reference — the
-    // parent recreates `user={{...}}` on every render, which used to tear
-    // down and rebuild the entire storage subscription pointlessly.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room, store, user?.id, user?.name, user?.color, isReadOnly]);
 
   return storeWithStatus;
