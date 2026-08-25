@@ -87,7 +87,7 @@ export function AuthShell({ title, description, children, footer }: AuthShellPro
               {[...colCards, ...colCards].map((card, i) => (
                 <div
                   key={i}
-                  className="h-36 rounded-2xl p-4 shadow-2xl flex flex-col justify-between border border-white/20 backdrop-blur-md"
+                  className="h-36 rounded-2xl p-4 shadow-md flex flex-col justify-between border border-white/20"
                   style={{ background: card.bg, color: card.text }}
                 >
                   <div className="font-mono text-[10px] opacity-80">node_0{i + 1}</div>
@@ -113,7 +113,7 @@ export function AuthShell({ title, description, children, footer }: AuthShellPro
           </Link>
         </div>
 
-        <div className="rounded-2xl border border-white/15 bg-[#18181b]/80 p-6 backdrop-blur-2xl shadow-[0_24px_70px_rgba(0,0,0,0.8)] sm:p-8">
+        <div className="rounded-2xl border border-white/15 bg-[#18181b]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.8)] sm:p-8">
           <div className="mb-5 text-center">
             <h1 className="text-xl font-light tracking-[-0.24px] text-white">{title}</h1>
             <p className="mt-1 text-sm text-zinc-300">{description}</p>

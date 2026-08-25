@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { TLComponents, Tldraw, useEditor, type TLStoreSnapshot } from "tldraw";
+import { TLComponents, Tldraw, useEditor, useValue, type TLStoreSnapshot } from "tldraw";
 import "tldraw/tldraw.css";
 import { motion, AnimatePresence } from "motion/react";
 import { ActiveUsers } from "@/features/board/_components/ActiveUsers";
@@ -28,27 +28,14 @@ interface BoardData {
 }
 
 // Plugin to synchronize tldraw dark mode setting with HTML document class
+// Uses tldraw's reactive signal (useValue) instead of listening to every store change.
 function ThemeSyncPlugin() {
   const editor = useEditor();
+  const isDark = useValue("isDarkMode", () => editor.user.getIsDarkMode(), [editor]);
 
   useEffect(() => {
-    const syncTheme = () => {
-      const isDark = editor.user.getIsDarkMode();
-      if (isDark) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    };
-
-    syncTheme();
-
-    const dispose = editor.store.listen((e) => {
-      if (e.source === "user") syncTheme();
-    });
-
-    return () => dispose();
-  }, [editor]);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
   return null;
 }
@@ -89,30 +76,21 @@ function BoardPersistence({
 function TopLeftThemeToggle() {
   const editor = useEditor();
   const [wipeTheme, setWipeTheme] = useState(false);
-  const [isDark, setIsDark] = useState(true);
   const [mounted, setMounted] = useState(false);
+
+  // Reactive signal — only re-renders when the dark mode value actually changes
+  const isDark = useValue("isDarkMode", () => editor.user.getIsDarkMode(), [editor]);
 
   useEffect(() => {
     setMounted(true);
-    setIsDark(editor.user.getIsDarkMode());
-    const dispose = editor.store.listen(() => {
-      setIsDark(editor.user.getIsDarkMode());
-    });
-    return () => dispose();
-  }, [editor]);
+  }, []);
 
   const handleThemeToggle = () => {
     setWipeTheme(true);
     setTimeout(() => {
-      const currentDark = editor.user.getIsDarkMode();
-      const nextDark = !currentDark;
+      const nextDark = !editor.user.getIsDarkMode();
       editor.user.updateUserPreferences({ colorScheme: nextDark ? "dark" : "light" });
-      setIsDark(nextDark);
-      if (nextDark) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+      document.documentElement.classList.toggle("dark", nextDark);
     }, 350);
 
     setTimeout(() => {

@@ -86,7 +86,7 @@ const COLUMN_3 = [
 function CardContent({ item }: { item: (typeof COLUMN_1)[0] }) {
   return (
     <div
-      className="group relative h-48 w-64 shrink-0 rounded-2xl border border-black/[0.04] p-5 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-black/10 dark:border-white/10 dark:hover:border-white/30"
+      className="relative h-48 w-64 shrink-0 rounded-2xl border border-black/[0.04] p-5 shadow-sm dark:border-white/10"
       style={{ background: item.bg }}
     >
       <div className="flex items-center justify-between">
@@ -167,12 +167,13 @@ function CardContent({ item }: { item: (typeof COLUMN_1)[0] }) {
 
 export function HeroCollage() {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden [perspective:1000px] [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden [perspective:1000px] mask-[linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]">
       <div className="flex h-[180%] w-[130%] -translate-x-[15%] -translate-y-[20%] items-center justify-center gap-10 [transform-style:preserve-3d] [transform:rotateX(22deg)_rotateY(-12deg)_rotateZ(12deg)] opacity-35 dark:opacity-20">
         {/* Column 1 - Downward stream */}
         <motion.div
           animate={{ y: ["0%", "-50%"] }}
           transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
+          style={{ willChange: "transform" }}
           className="flex flex-col gap-6"
         >
           {[...COLUMN_1, ...COLUMN_1].map((item, i) => (
@@ -184,6 +185,7 @@ export function HeroCollage() {
         <motion.div
           animate={{ y: ["-50%", "0%"] }}
           transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
+          style={{ willChange: "transform" }}
           className="flex flex-col gap-6"
         >
           {[...COLUMN_2, ...COLUMN_2].map((item, i) => (
@@ -195,6 +197,7 @@ export function HeroCollage() {
         <motion.div
           animate={{ y: ["0%", "-50%"] }}
           transition={{ duration: 26, repeat: Infinity, ease: "linear" }}
+          style={{ willChange: "transform" }}
           className="flex flex-col gap-6"
         >
           {[...COLUMN_3, ...COLUMN_3].map((item, i) => (
@@ -206,6 +209,7 @@ export function HeroCollage() {
         <motion.div
           animate={{ y: ["-50%", "0%"] }}
           transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          style={{ willChange: "transform" }}
           className="flex flex-col gap-6"
         >
           {[...COLUMN_1, ...COLUMN_1].map((item, i) => (
