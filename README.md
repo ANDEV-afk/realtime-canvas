@@ -54,9 +54,9 @@
 * **Challenge:** Re-rendering complex drawings on large canvases leads to high CPU usage and dropped frames during panning/zooming.
 * **Solution:** Segmented canvas elements into spatial chunks and utilized dynamic offscreen rendering layers to process static shapes independently from active user actions.
 
-### 3. State Conflict Resolution
-* **Challenge:** Handling simultaneous shape modifications by different users without overwriting actions or causing UI glitches.
-* **Solution:** Applied **Conflict-Free Replicated Data Types (CRDTs)** logic combined with optimistic UI updates to instantly render local changes before server confirmation.
+### 3. State Conflict Resolution & Optimistic Updates
+* **Challenge:** Handling simultaneous shape modifications by multiple users without overwriting ongoing actions, dropping state changes, or causing UI flickering.
+* **Solution:** Leveraged Liveblocks' dynamic presence state and room storage model combined with **optimistic UI updates**. Local user mutations are rendered immediately on the client canvas while state synchronization and conflict resolution are managed seamlessly in the background.
 
 ---
 
