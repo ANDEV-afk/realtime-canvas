@@ -64,9 +64,9 @@
 
 * **Frontend:** Next.js (App Router), React 18, TypeScript
 * **Styling & UI Components:** Tailwind CSS, Lucide Icons, Shadcn UI
-* **Real-time Infrastructure:** WebSockets / Liveblocks Engine
-* **Database & ORM:** PostgreSQL / SQLite, Prisma ORM
-* **Deployment & Hosting:** Vercel
+* **Real-time Infrastructure:** WebSockets / Liveblocks
+* **Database & ORM:** PostgreSQL, Prisma ORM
+* **Deployment & Hosting:** AWS EC2 machine
 
 ---
 
