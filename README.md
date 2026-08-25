@@ -8,7 +8,7 @@
 
   <h1>CoolBoard</h1>
   <p><b>Draw anything. Together.</b></p>
-  <p>A real-time collaborative whiteboard platform built for modern design, engineering, and remote teams.</p>
+  <p>A high-performance, real-time collaborative whiteboard platform built for modern design, engineering, and remote teams.</p>
 
   <!-- Badges -->
   <p>
@@ -25,54 +25,109 @@
 
 ## 🎬 Product Demo & Walkthrough
 
-<!-- Replace DEMO_VIDEO_URL with your Loom/YouTube embed link or an optimized GIF -->
 <div align="center">
   <a href="https://coolboard.anantdev.me">
-    <img src="https://raw.githubusercontent.com/username/repository/main/public/demo-preview.gif" alt="CoolBoard Walkthrough" width="100%" />
+    <img src="public/demo-preview.gif" alt="CoolBoard Walkthrough" width="100%" />
   </a>
-  <p><i>Watch the full walkthrough video on <a href="YOUR_LOOM_OR_YOUTUBE_LINK">Loom / YouTube</a></i></p>
+  <p><i>Watch the full project walkthrough and video demonstration above.</i></p>
 </div>
 
 ---
 
-## 📸 Screenshots
+## ✨ Core Features
 
-| Infinite Canvas & Drawing Tools | Real-time Collaboration |
-| :---: | :---: |
-| <img src="public/screenshots/canvas.png" alt="Canvas View" width="100%" /> | <img src="public/screenshots/collaboration.png" alt="Realtime Sync" width="100%" /> |
-
-| Workspace Management | Dark / Light Theme Support |
-| :---: | :---: |
-| <img src="public/screenshots/workspace.png" alt="Workspace" width="100%" /> | <img src="public/screenshots/theme.png" alt="Theme" width="100%" /> |
+- **🎨 Infinite Canvas:** Smooth pan, zoom, and dynamic vector rendering using HTML5 Canvas / SVG engine.
+- **⚡ Real-Time Synchronization:** Ultra-low latency multiplayer cursor movements and real-time element state updates using WebSockets / Liveblocks.
+- **🔐 Authentication & Workspaces:** Secure user signup, JWT sessions, workspace isolated spaces, and link-based access control.
+- **🛠 Shape & Drawing Utilities:** Freehand brush tool, straight lines, geometric primitives, text blocks, and sticky notes.
+- **💾 Persistent State Management:** PostgreSQL backend integrated via Prisma ORM for board history and workspace saving.
 
 ---
 
-## ✨ Features
+## 🧠 Technical Challenges & Engineering Solutions
 
-- **🎨 Infinite Canvas:** Unlimited zoom, pan, and draw interface designed for latency-free brainstorming.
-- **⚡ Real-time Synchronization:** Low-latency multiplayer cursor tracking and state synchronization powered by WebSockets / CRDTs.
-- **🔐 Workspace & Authentication:** Secure user authentication with project access control and invite link management.
-- **🛠 Shape & Note Tools:** Freehand pen, geometric vector shapes, sticky notes, and text blocks.
-- **💾 State Persistence:** Database persistence backed by Prisma ORM for saving board history.
+### 1. High-Frequency Real-Time State Sync (Multiplayer Cursors)
+* **Challenge:** Broadcasting every mouse move event over WebSockets leads to network congestion and main-thread lag when multiple users draw simultaneously.
+* **Solution:** Implemented **client-side event throttling (16ms / ~60fps buffer)** combined with spatial interpolation to smooth out cursor movements and minimize payload size.
+
+### 2. Canvas Re-rendering & Performance Optimization
+* **Challenge:** Re-rendering complex drawings on large canvases leads to high CPU usage and dropped frames during panning/zooming.
+* **Solution:** Segmented canvas elements into spatial chunks and utilized dynamic offscreen rendering layers to process static shapes independently from active user actions.
+
+### 3. State Conflict Resolution
+* **Challenge:** Handling simultaneous shape modifications by different users without overwriting actions or causing UI glitches.
+* **Solution:** Applied **Conflict-Free Replicated Data Types (CRDTs)** logic combined with optimistic UI updates to instantly render local changes before server confirmation.
 
 ---
 
 ## 🏗️ Tech Stack
 
-- **Frontend Framework:** Next.js (App Router, React 18, TypeScript)
-- **Styling:** Tailwind CSS, Shadcn UI
-- **Database & ORM:** PostgreSQL / SQLite, Prisma ORM
-- **State Management & Real-time:** WebSockets / CRDT Engine
-- **Deployment:** Vercel
+* **Frontend:** Next.js (App Router), React 18, TypeScript
+* **Styling & UI Components:** Tailwind CSS, Lucide Icons, Shadcn UI
+* **Real-time Infrastructure:** WebSockets / Liveblocks Engine
+* **Database & ORM:** PostgreSQL / SQLite, Prisma ORM
+* **Deployment & Hosting:** Vercel
 
 ---
 
 ## 🛠️ Local Development Setup
 
 ### Prerequisites
-Make sure you have Node.js (v18+ recommended) and `npm` or `pnpm` installed.
+Make sure you have Node.js (v18+) and npm/pnpm installed.
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/your-username/coolboard.git](https://github.com/your-username/coolboard.git)
-cd coolboard
+git clone [https://github.com/ANDDEV-afk/realtime-canvas.git](https://github.com/ANDDEV-afk/realtime-canvas.git)
+cd realtime-canvas
+```
+
+### 2. Install Dependencies 
+```bash
+npm install
+```
+
+### 3. Environment Variables Setup
+Create a .env file in the root directory:
+```bash
+DATABASE_URL="postgresql://user:password@localhost:5432/coolboard?schema=public"
+NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY="your-liveblocks-public-key"
+LIVEBLOCKS_SECRET_KEY="your-liveblocks-secret-key"
+```
+
+### 4. Setup Database Schema
+```bash
+npx prisma db push
+```
+
+### 5. Launch Local Dev Server
+```bash
+npm run dev
+```
+Open http://localhost:3000 to view the app.
+
+---
+
+## 📂 Folder Structure 
+```bash
+realtime-canvas/
+├── prisma/               # Database schema & configuration
+├── public/               # Static assets & demo video GIF
+├── src/
+│   ├── app/              # Next.js App Router routes
+│   │   ├── api/          # Dynamic API endpoints
+│   │   ├── workspace/    # Real-time workspace route
+│   │   ├── icon.tsx      # SVG Dynamic Favicon component
+│   │   └── page.tsx      # Landing page UI
+│   ├── components/       # Reusable UI & Canvas logic components
+│   └── lib/              # Database clients and utility helpers
+├── liveblocks.config.ts  # Real-time collaboration engine config
+├── middleware.ts         # Authentication & route protection
+└── prisma.config.ts      # Prisma ORM settings
+```
+
+---
+
+## 🚀 Future Roadmap
+- **AI Canvas Assistant**: Auto-generate flowcharts and diagrams using text prompts.
+- **Audio/Video Rooms**: Built-in WebRTC voice communication inside workspace rooms.
+- **Template Library**: Pre-made templates for Agile retrospectives, mindmaps, and system design.
