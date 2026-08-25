@@ -129,5 +129,7 @@ realtime-canvas/
 
 ## 🚀 Future Roadmap
 - **AI Canvas Assistant**: Auto-generate flowcharts and diagrams using text prompts.
+
 - **Audio/Video Rooms**: Built-in WebRTC voice communication inside workspace rooms.
+
 - **Template Library**: Pre-made templates for Agile retrospectives, mindmaps, and system design.
