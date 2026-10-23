@@ -31,7 +31,6 @@
   <a href="https://coolboard.anantdev.me">
     <img src="public/demo-preview.gif" alt="CoolBoard Walkthrough" width="100%" />
   </a>
-  <p><i>Watch the full project walkthrough and video demonstration above.</i></p>
 </div>
 
 ---
