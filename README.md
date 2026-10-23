@@ -23,7 +23,9 @@
 
 ---
 
-## 🎬 Product Demo & Walkthrough
+## 🎬 Architecture->
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/58db0ae9-1478-4ba1-954b-8b3e126c8e16" />
+
 
 <div align="center">
   <a href="https://coolboard.anantdev.me">
